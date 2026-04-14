@@ -1,0 +1,313 @@
+import React, { useState, useEffect } from 'react';
+import { 
+  LayoutDashboard, 
+  BookOpen, 
+  FileText, 
+  Star, 
+  Megaphone,
+  Bell, 
+  Users, 
+  ClipboardList, 
+  Library, 
+  CheckCircle2,
+  MonitorPlay,
+  Monitor,
+  Clock,
+  Loader2,
+  LogOut,
+  ChevronRight
+} from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { auth } from '../lib/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
+import type { Course } from '../services/courseService';
+import { courseService } from '../services/courseService';
+import type { Submission } from '../services/assignmentService';
+import { assignmentService } from '../services/assignmentService';
+import type { UserProfile } from '../services/userService';
+import { userService } from '../services/userService';
+
+const LecturerDashboard: React.FC = () => {
+  const navigate = useNavigate();
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [submissions, setSubmissions] = useState<Submission[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        try {
+          const profile = await userService.getUserById(user.uid);
+          setUserProfile(profile);
+
+          const lecturerCourses = await courseService.getCoursesByLecturer(user.uid);
+          setCourses(lecturerCourses);
+
+          const lecturerSubmissions = await assignmentService.getSubmissionsForLecturer(user.uid);
+          setSubmissions(lecturerSubmissions);
+        } catch (err) {
+          console.error('Error fetching dashboard data:', err);
+        } finally {
+          setIsLoading(false);
+        }
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const pendingReviews = submissions.filter(s => s.status === 'PENDING').length;
+
+  const stats = [
+    { label: 'Total Students', value: isLoading ? '...' : '124', badge: '+0%', badgeColor: 'bg-emerald-50 text-emerald-600', icon: <Users size={20} className="text-blue-600" />, bg: 'bg-blue-50' },
+    { label: 'Pending Reviews', value: isLoading ? '...' : pendingReviews.toString(), badge: pendingReviews > 0 ? 'Attention' : 'Clean', badgeColor: pendingReviews > 0 ? 'bg-orange-50 text-orange-600' : 'bg-emerald-50 text-emerald-600', icon: <ClipboardList size={20} className="text-orange-600" />, bg: 'bg-orange-50' },
+    { label: 'Active Courses', value: isLoading ? '...' : courses.length.toString(), icon: <Library size={20} className="text-purple-600" />, bg: 'bg-purple-50' },
+    { label: 'Completion Rate', value: '82%', icon: <CheckCircle2 size={20} className="text-blue-600" />, bg: 'bg-blue-50' },
+  ];
+
+  return (
+    <div className="flex h-screen bg-slate-50 font-outfit overflow-hidden">
+      {/* Sidebar */}
+      <aside className="w-64 bg-white border-r border-slate-200 flex flex-col shrink-0">
+        <div className="p-8">
+          <Link to="/lecturer-dashboard" className="flex flex-col gap-1">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center p-1.5 shadow-md shadow-blue-200">
+                <div className="grid grid-cols-2 gap-0.5 w-full h-full">
+                  <div className="bg-white rounded-sm"></div>
+                  <div className="bg-white/40 rounded-sm"></div>
+                  <div className="bg-white/40 rounded-sm"></div>
+                  <div className="bg-white rounded-sm"></div>
+                </div>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[16px] font-extrabold text-blue-600 tracking-tight leading-tight">ACADSUBMIT</span>
+                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-tight mt-0.5">HIMS Buea</span>
+              </div>
+            </div>
+          </Link>
+        </div>
+
+        <nav className="flex-1 px-4 py-4 space-y-2">
+          {[
+            { icon: <LayoutDashboard size={18} />, label: 'Dashboard', active: true, path: '/lecturer-dashboard' },
+            { icon: <BookOpen size={18} />, label: 'My Courses', active: false, path: '/lecturer-courses' },
+            { icon: <FileText size={18} />, label: 'Assignments', active: false, path: '/lecturer-assignments' },
+            { icon: <Star size={18} />, label: 'Grading', active: false, path: '/lecturer-grading' },
+            { icon: <Megaphone size={18} />, label: 'Announcements', active: false, path: '#' },
+          ].map((item) => (
+            <Link
+              to={item.path}
+              key={item.label}
+              className={`w-full flex items-center gap-4 px-5 py-3.5 rounded-xl text-sm font-bold transition-all ${
+                item.active 
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-200' 
+                  : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
+              }`}
+            >
+              <div className={item.active ? 'text-white/90' : 'text-slate-400'}>
+                {item.icon}
+              </div>
+              {item.label}
+            </Link>
+          ))}
+        </nav>
+
+        <div className="p-6">
+          <div className="bg-slate-50 rounded-2xl p-4 flex items-center gap-3">
+            <img 
+              src={`https://ui-avatars.com/api/?name=${userProfile?.name || 'User'}&background=0f172a&color=fff`}
+              alt={userProfile?.name} 
+              className="w-10 h-10 rounded-full border-2 border-slate-100"
+            />
+            <div className="overflow-hidden">
+              <p className="text-sm font-bold text-slate-900 truncate tracking-tight">{userProfile?.name || 'Loading...'}</p>
+              <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest leading-tight">{userProfile?.role || 'Lecturer'}</p>
+            </div>
+          </div>
+          <button 
+            onClick={() => auth.signOut()}
+            className="flex items-center justify-center gap-2 w-full mt-4 py-3 bg-slate-50 hover:bg-slate-100 rounded-xl text-[11px] font-extrabold text-slate-600 transition-colors uppercase tracking-wider"
+          >
+            <LogOut size={14} />
+            Logout
+          </button>
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <main className="flex-1 flex flex-col overflow-hidden bg-[#fafafa] relative">
+        {isLoading && (
+          <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center text-blue-600">
+            <Loader2 className="animate-spin mb-4" size={48} />
+            <p className="text-[11px] font-extrabold uppercase tracking-[0.2em]">Synchronizing Console</p>
+          </div>
+        )}
+        <div className="flex-1 overflow-y-auto no-scrollbar">
+          {/* Header */}
+          <header className="px-10 py-10 flex justify-between items-start">
+            <div>
+              <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-1.5">Lecturer Console</p>
+              <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Welcome back, {userProfile?.name?.split(' ')[0] || 'Lecturer'}!</h1>
+            </div>
+            
+            <div className="flex items-center gap-4">
+              <button className="relative w-10 h-10 flex items-center justify-center text-slate-500 bg-white rounded-full shadow-sm border border-slate-100 hover:bg-slate-50 transition-colors">
+                <Bell size={18} />
+                <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-rose-500 rounded-full border border-white"></span>
+              </button>
+              <div className="w-10 h-10 bg-slate-700 rounded-full text-white flex items-center justify-center text-sm font-bold shadow-sm">
+                SA
+              </div>
+            </div>
+          </header>
+
+          <div className="px-10 pb-10 space-y-8">
+            {/* Stats Grid */}
+            <div className="grid grid-cols-4 gap-6">
+              {stats.map((stat, idx) => (
+                <div 
+                  key={idx}
+                  className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col"
+                >
+                  <div className="flex justify-between items-start mb-6">
+                    <div className={`w-12 h-12 ${stat.bg} rounded-2xl flex items-center justify-center`}>
+                      {stat.icon}
+                    </div>
+                    {stat.badge && (
+                      <span className={`text-[10px] font-extrabold px-3 py-1 bg-opacity-10 rounded-md ${stat.badgeColor}`}>
+                        {stat.badge}
+                      </span>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-[11px] font-bold text-slate-400 mb-1 leading-none">{stat.label}</p>
+                    <p className="text-3xl font-extrabold text-slate-800 tracking-tight">{stat.value}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Main Grid */}
+            <div className="grid grid-cols-3 gap-8">
+              {/* Left Column - Current Courses */}
+              <div className="col-span-2">
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="text-lg font-extrabold text-slate-900">Current Courses</h3>
+                  <a href="#" className="text-[11px] font-extrabold text-blue-600 hover:text-blue-700 uppercase tracking-widest">View all courses</a>
+                </div>
+                
+                <div className="space-y-4">
+                  {courses.length === 0 && !isLoading && (
+                    <div className="bg-white p-12 rounded-3xl border border-dashed border-slate-200 text-center">
+                      <BookOpen size={48} className="mx-auto text-slate-200 mb-4" />
+                      <p className="text-sm font-bold text-slate-400 uppercase tracking-wider">No Assigned Courses</p>
+                      <p className="text-xs text-slate-300 mt-2">Contact the admin to register courses under your profile.</p>
+                    </div>
+                  )}
+                  {courses.map((course, idx) => {
+                    const courseSubmissions = submissions.filter(s => s.status === 'PENDING'); // Ideally filtered by assignment -> course
+                    const pendingCount = courseSubmissions.length; // Simplified for now
+                    
+                    return (
+                      <div key={idx} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between hover:shadow-md transition-shadow cursor-pointer group">
+                        <div className="flex items-center gap-5">
+                          <div className="w-12 h-12 bg-blue-50/50 border border-blue-50 rounded-xl flex items-center justify-center text-blue-600 transition-colors group-hover:bg-blue-600 group-hover:text-white">
+                            <MonitorPlay size={20} />
+                          </div>
+                          <div>
+                            <h4 className="text-[13px] font-extrabold text-slate-900 uppercase tracking-tight">{course.name}</h4>
+                            <p className="text-[11px] font-semibold text-slate-400 mt-1">{course.code} • {course.semester}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-8">
+                          <div className="text-right">
+                            <p className="text-xs font-bold text-orange-500 flex items-center gap-1.5 justify-end">
+                              <Clock size={12} />
+                              {pendingCount} Pending
+                            </p>
+                            <p className="text-[9px] font-extrabold text-slate-300 uppercase tracking-widest mt-1">Reviews</p>
+                          </div>
+                          <span className={`px-4 py-1.5 ${course.status === 'Active' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-400'} text-[10px] font-extrabold rounded-full uppercase tracking-wider`}>
+                            {course.status}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Right Column - Quick Actions & Notice */}
+              <div className="space-y-6">
+                <div className="bg-white p-7 rounded-3xl border border-slate-100 shadow-sm">
+                  <h3 className="text-[14px] font-extrabold text-slate-900 mb-5">Quick Actions</h3>
+                  <div className="space-y-3.5">
+                    <button className="w-full flex items-center justify-center gap-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 px-4 rounded-xl shadow-lg shadow-blue-200 transition-all text-sm">
+                      <Megaphone size={16} />
+                      Post Announcement
+                    </button>
+                    <button 
+                      onClick={() => navigate('/lecturer-assignments')}
+                      className="w-full flex items-center justify-center gap-2.5 bg-white border-2 border-slate-100 hover:border-slate-200 hover:bg-slate-50 text-slate-700 font-bold py-3.5 px-4 rounded-xl transition-all text-sm"
+                    >
+                      <FileText size={16} />
+                      Create Assignment
+                    </button>
+                  </div>
+                  <div className="mt-6 text-center">
+                    <a href="#" className="text-[11px] font-extrabold text-slate-400 hover:text-blue-600 transition-colors">Manage Course Materials</a>
+                  </div>
+                </div>
+
+                <div className="bg-white p-7 rounded-3xl border border-slate-100 shadow-sm mt-6">
+                  <h3 className="text-[14px] font-extrabold text-slate-900 mb-5">Recent Submissions</h3>
+                  <div className="space-y-4">
+                    {submissions.filter(s => s.status === 'PENDING').slice(0, 5).map((sub) => (
+                      <div 
+                        key={sub.id} 
+                        onClick={() => navigate(`/lecturer-grading/${sub.id}`)}
+                        className="flex items-center justify-between group cursor-pointer"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-500 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                            {sub.studentName?.split(' ').map(n => n[0]).join('') || 'ST'}
+                          </div>
+                          <div>
+                            <p className="text-[11px] font-bold text-slate-700 group-hover:text-blue-600 transition-colors">{sub.studentName}</p>
+                            <p className="text-[9px] font-semibold text-slate-400">{new Date(sub.submittedAt).toLocaleDateString()}</p>
+                          </div>
+                        </div>
+                        <ChevronRight size={14} className="text-slate-300 group-hover:text-blue-600 transition-colors" />
+                      </div>
+                    ))}
+                    {submissions.filter(s => s.status === 'PENDING').length === 0 && (
+                      <p className="text-[10px] font-bold text-slate-400 italic text-center py-4">No pending submissions</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <footer className="px-10 py-6 border-t border-slate-200 bg-white shrink-0 flex justify-between items-center mt-auto">
+          <div className="flex items-center gap-2 text-[11px]">
+            <span className="font-extrabold text-blue-600">ACADSUBMIT Portal</span>
+            <span className="text-slate-300">|</span>
+            <span className="font-semibold text-slate-400">Higher Institute of Management Studies (HIMS) Buea</span>
+          </div>
+          <div className="flex gap-6 text-[11px] font-bold text-slate-400">
+            <a href="#" className="hover:text-blue-600 transition-colors">Support</a>
+            <a href="#" className="hover:text-blue-600 transition-colors">Policies</a>
+            <a href="#" className="hover:text-blue-600 transition-colors">Help Center</a>
+          </div>
+        </footer>
+      </main>
+    </div>
+  );
+};
+
+export default LecturerDashboard;

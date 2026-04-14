@@ -1,0 +1,83 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
+
+/* 2️⃣ Define custom theme values using @theme (Tailwind v4 way) */
+@theme {
+  /* Custom colors */
+  --color-hims-blue: #0076E4;
+  --color-hims-dark: #0F172A;
+  --color-hims-slate: #64748B;
+  --color-hims-light: #F8FAFC;
+
+  /* Custom fonts */
+  --font-outfit: "Outfit", sans-serif;
+  --font-inter: "Inter", sans-serif;
+
+  /* Custom background images */
+  --bg-hero-pattern: linear-gradient(rgba(15, 23, 42, 0.4), rgba(15, 23, 42, 0.4)), url('/hero-bg.jpg');
+}
+
+/* 4️⃣ Root Styles */
+:root {
+  font-family: var(--font-outfit);
+  line-height: 1.5;
+  font-weight: 400;
+  color-scheme: light dark;
+  color: #0F172A;
+  background-color: #ffffff;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  display: flex;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+/* 5️⃣ Base layer for inputs and buttons */
+@layer base {
+
+  /* Input fields */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"] {
+    @apply w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0076E4] focus:border-hims-blue transition-all duration-200;
+  }
+
+  /* Buttons */
+  button {
+    @apply px-6 py-3 rounded-lg font-semibold text-white bg-hims-blue hover:bg-hims-blue transition-all duration-200;
+  }
+
+  /* Cards */
+  .card {
+    @apply p-6 rounded-2xl shadow-lg bg-white/80 backdrop-blur-md;
+  }
+
+  /* Glass effect */
+  .glass {
+    @apply bg-white/10 backdrop-blur-lg border border-white/10;
+  }
+
+  /* Text & Background utilities using @apply (no theme()) */
+  .text-hims-dark {
+    @apply text-hims-dark;
+  }
+
+  .bg-hims-light {
+    @apply bg-hims-light;
+  }
+
+  /* 6️⃣ Utility to hide scrollbars */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+  }
+}
