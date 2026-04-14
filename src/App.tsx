@@ -14,6 +14,8 @@ import StudentGradesPage from './pages/StudentGradesPage';
 import SubmitAssignmentPage from './pages/SubmitAssignmentPage';
 import UploadHistoryPage from './pages/UploadHistoryPage';
 import UserManagementPage from './pages/UserManagementPage';
+import StudentCoursesPage from './pages/StudentCoursesPage';
+import StudentProfilePage from './pages/StudentProfilePage';
 import DashboardLayout from './components/layout/DashboardLayout';
 
 function App() {
@@ -25,10 +27,10 @@ function App() {
         
         {/* Admin Routes */}
         <Route path="/dashboard" element={<DashboardLayout><AdminDashboard /></DashboardLayout>} />
-        <Route path="/users" element={<UserManagementPage />} />
-        <Route path="/courses" element={<ManageCoursesPage />} />
-        <Route path="/backup" element={<DatabaseBackupPage />} />
-        <Route path="/logs" element={<SystemLogsPage />} />
+        <Route path="/users" element={<DashboardLayout><UserManagementPage /></DashboardLayout>} />
+        <Route path="/courses" element={<DashboardLayout><ManageCoursesPage /></DashboardLayout>} />
+        <Route path="/backup" element={<DashboardLayout><DatabaseBackupPage /></DashboardLayout>} />
+        <Route path="/logs" element={<DashboardLayout><SystemLogsPage /></DashboardLayout>} />
         
         {/* Lecturer Routes */}
         <Route path="/lecturer-dashboard" element={<LecturerDashboard />} />
@@ -38,6 +40,8 @@ function App() {
         
         {/* Student Routes */}
         <Route path="/student-dashboard" element={<StudentDashboard />} />
+        <Route path="/student-courses" element={<StudentCoursesPage />} />
+        <Route path="/student-profile" element={<StudentProfilePage />} />
         <Route path="/assignments/:assignmentId" element={<SubmitAssignmentPage />} />
         <Route path="/upload-history" element={<UploadHistoryPage />} />
         <Route path="/student-grades" element={<StudentGradesPage />} />

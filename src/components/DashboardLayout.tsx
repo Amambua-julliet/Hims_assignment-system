@@ -42,7 +42,13 @@ const SidebarItem: React.FC<SidebarItemProps> = ({ icon, label, path, isActive }
   );
 };
 
-const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+interface DashboardLayoutProps {
+  children: React.ReactNode;
+  title?: string;
+  breadcrumb?: string;
+}
+
+const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, title, breadcrumb }) => {
   const location = useLocation();
 
   const menuItems = [

@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { auth, db } from '../lib/firebase';
-import { onAuthStateChanged } from 'firebase/auth';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
 import type { UserProfile } from '../services/userService';
 import { userService } from '../services/userService';
 import type { Submission } from '../services/assignmentService';
@@ -98,10 +98,10 @@ const StudentGradesPage: React.FC = () => {
         <nav className="flex-1 px-4 space-y-1.5">
           {[
             { icon: <LayoutDashboard size={18} />, label: 'Dashboard', active: false, path: '/student-dashboard' },
-            { icon: <BookOpen size={18} />, label: 'My Courses', active: false, path: '#' },
+            { icon: <BookOpen size={18} />, label: 'My Courses', active: false, path: '/student-courses' },
             { icon: <Star size={18} />, label: 'My Grades', active: true, path: '/student-grades' },
             { icon: <History size={18} />, label: 'Upload History', active: false, path: '/upload-history' },
-            { icon: <User size={18} />, label: 'Profile', active: false, path: '#' },
+            { icon: <User size={18} />, label: 'Profile', active: false, path: '/student-profile' },
           ].map((item) => (
             <Link
               to={item.path}
@@ -121,7 +121,7 @@ const StudentGradesPage: React.FC = () => {
 
         <div className="p-8 border-t border-slate-50">
           <button 
-            onClick={() => auth.signOut()}
+            onClick={async () => { await signOut(auth); navigate('/login'); }}
             className="flex items-center gap-3 text-[13px] font-bold text-slate-600 hover:text-rose-500 transition-colors mb-6"
           >
             <LogOut size={18} />

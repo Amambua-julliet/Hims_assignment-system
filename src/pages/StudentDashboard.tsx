@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { auth } from '../lib/firebase';
-import { onAuthStateChanged } from 'firebase/auth';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { userService } from '../services/userService';
 import type { UserProfile } from '../services/userService';
 import { courseService } from '../services/courseService';
@@ -87,7 +87,7 @@ const StudentDashboard: React.FC = () => {
   return (
     <div className="flex h-screen bg-[#fafafa] font-outfit overflow-hidden text-slate-900">
       {/* Sidebar */}
-      <aside className="w-64 bg-white border-r border-slate-100 flex flex-col shrink-0 z-10">
+      <aside className="w-72 bg-white border-r border-slate-100 flex flex-col shrink-0 z-10">
         <div className="p-8">
           <Link to="/student-dashboard" className="flex flex-col gap-1">
             <div className="flex items-center gap-3">
@@ -110,15 +110,15 @@ const StudentDashboard: React.FC = () => {
         <nav className="flex-1 px-4 space-y-1.5">
           {[
             { icon: <LayoutDashboard size={18} />, label: 'Dashboard', active: true, path: '/student-dashboard' },
-            { icon: <BookOpen size={18} />, label: 'My Courses', active: false, path: '#' },
+            { icon: <BookOpen size={18} />, label: 'My Courses', active: false, path: '/student-courses' },
             { icon: <Star size={18} />, label: 'My Grades', active: false, path: '/student-grades' },
             { icon: <History size={18} />, label: 'Upload History', active: false, path: '/upload-history' },
-            { icon: <User size={18} />, label: 'Profile', active: false, path: '#' },
+            { icon: <User size={18} />, label: 'Profile', active: false, path: '/student-profile' },
           ].map((item) => (
             <Link
               to={item.path}
               key={item.label}
-              className={`w-full flex items-center gap-4 px-5 py-3.5 rounded-xl text-[13px] font-bold transition-all ${item.active
+              className={`w-full flex items-center gap-4 px-5 py-4 rounded-xl text-sm font-bold transition-all ${item.active
                   ? 'bg-blue-50 text-blue-600 shadow-sm'
                   : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
                 }`}
@@ -133,8 +133,8 @@ const StudentDashboard: React.FC = () => {
 
         <div className="p-8 border-t border-slate-50">
           <button 
-            onClick={() => auth.signOut()}
-            className="flex items-center gap-3 text-[13px] font-bold text-slate-600 hover:text-rose-500 transition-colors mb-6"
+            onClick={async () => { await signOut(auth); navigate('/login'); }}
+            className="flex items-center gap-3 text-sm font-bold text-slate-600 hover:text-rose-500 transition-colors mb-6"
           >
             <LogOut size={18} />
             Logout
@@ -178,7 +178,7 @@ const StudentDashboard: React.FC = () => {
           {/* Welcome Section */}
           <div>
             <h1 className="text-[28px] font-extrabold text-slate-900 tracking-tight flex items-center gap-3">
-              Welcome, {userProfile?.name || 'Student'} <span className="animate-bounce">👋</span>
+              Welcome, {userProfile?.name || 'Student'} 👋 {userProfile?.matricule && <span className="text-xl text-slate-400 font-semibold align-middle ml-2">({userProfile.matricule})</span>}
             </h1>
             <p className="text-[14px] font-medium text-slate-500 mt-1">You have {pendingAssignments.length} assignments due this week. Stay focused!</p>
           </div>

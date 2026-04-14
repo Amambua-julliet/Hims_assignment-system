@@ -38,6 +38,11 @@ body {
   min-height: 100vh;
 }
 
+#root {
+  width: 100%;
+  flex: 1;
+}
+
 /* 5️⃣ Base layer for inputs and buttons */
 @layer base {
 

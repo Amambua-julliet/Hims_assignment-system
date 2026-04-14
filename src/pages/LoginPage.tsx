@@ -14,18 +14,50 @@ const LoginPage: React.FC = () => {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
+  const getFriendlyError = (err: any): string => {
+    const code: string = err?.code || '';
+    const msg: string = err?.message || '';
+
+    if (code === 'unavailable' || msg.includes('client is offline')) {
+      return 'Connection failed. Please check your internet connection and try again.';
+    }
+    if (code === 'auth/user-not-found' || code === 'auth/wrong-password' || code === 'auth/invalid-credential') {
+      return 'Incorrect email or password. Please try again.';
+    }
+    if (code === 'auth/too-many-requests') {
+      return 'Too many failed attempts. Please wait a few minutes and try again.';
+    }
+    if (code === 'auth/network-request-failed') {
+      return 'Network error. Please check your internet connection.';
+    }
+    if (code === 'auth/user-disabled') {
+      return 'Your account has been disabled. Please contact the administrator.';
+    }
+    return 'An unexpected error occurred. Please try again.';
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
 
     try {
+      // Step 1: Authenticate with Firebase Auth
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // Fetch user role from Firestore
-      const userDoc = await getDoc(doc(db, 'users', user.uid));
-      
+      // Step 2: Fetch user role from Firestore (more resilient to network hiccups)
+      let userDoc;
+      try {
+        userDoc = await getDoc(doc(db, 'users', user.uid));
+      } catch (firestoreErr: any) {
+        console.error('Firestore fetch error:', firestoreErr);
+        setError(getFriendlyError(firestoreErr));
+        setIsLoading(false);
+        return;
+      }
+
+      // Step 3: Route based on role
       if (userDoc.exists()) {
         const userData = userDoc.data();
         const role = userData.role;
@@ -37,20 +69,14 @@ const LoginPage: React.FC = () => {
         } else if (role === 'STUDENT') {
           navigate('/student-dashboard');
         } else {
-          setError('User role not recognized.');
+          setError('User role not recognized. Please contact the system administrator.');
         }
       } else {
-        // Fallback for testing if Firestore doc doesn't exist yet but Auth does
-        // This is helpful for the first admin user created via console
-        if (email.includes('admin')) {
-          navigate('/dashboard');
-        } else {
-          setError('User profile not found in database.');
-        }
+        setError('User profile not found. Your account may not have completed setup — please contact the administrator.');
       }
     } catch (err: any) {
       console.error('Login error:', err);
-      setError(err.message || 'Failed to login. Please check your credentials.');
+      setError(getFriendlyError(err));
     } finally {
       setIsLoading(false);
     }
@@ -59,14 +85,14 @@ const LoginPage: React.FC = () => {
   return (
     <div className="flex flex-col md:flex-row min-h-screen w-full font-outfit bg-white overflow-hidden">
       {/* Left Section - Hero */}
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, x: -20 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.8, ease: "easeOut" }}
         className="relative flex-1 hidden md:flex flex-col justify-between p-12 text-white overflow-hidden"
       >
         {/* Background Image with Overlay */}
-        <div 
+        <div
           className="absolute inset-0 bg-cover bg-center z-0"
           style={{ backgroundImage: "url('/hero-bg.jpg')" }}
         />
@@ -88,7 +114,7 @@ const LoginPage: React.FC = () => {
         </div>
 
         <div className="relative z-20 mt-auto mb-12 max-w-xl">
-          <motion.h1 
+          <motion.h1
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.3 }}
@@ -97,7 +123,7 @@ const LoginPage: React.FC = () => {
             Welcome to <br />
             <span className="text-white/90">ACADSUBMIT</span>
           </motion.h1>
-          <motion.p 
+          <motion.p
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.5 }}
@@ -106,7 +132,7 @@ const LoginPage: React.FC = () => {
             Excellence in Management Studies. Empowering the next generation of African leaders in Buea, Cameroon.
           </motion.p>
 
-          <motion.div 
+          <motion.div
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.7 }}
@@ -129,7 +155,7 @@ const LoginPage: React.FC = () => {
       </motion.div>
 
       {/* Right Section - Login Form */}
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, x: 20 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.8, ease: "easeOut" }}
@@ -158,8 +184,8 @@ const LoginPage: React.FC = () => {
                 <div className="absolute left-4 top-1/2 -translate-y-1/2 text-hims-slate transition-colors group-focus-within:text-hims-blue">
                   <User size={18} />
                 </div>
-                <input 
-                  type="email" 
+                <input
+                  type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="e.g. admin@hims.edu"
@@ -181,14 +207,14 @@ const LoginPage: React.FC = () => {
                 <div className="absolute left-4 top-1/2 -translate-y-1/2 text-hims-slate transition-colors group-focus-within:text-hims-blue">
                   <Lock size={18} />
                 </div>
-                <input 
+                <input
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   className="w-full pl-12 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-hims-blue focus:ring-1 focus:ring-hims-blue transition-all outline-none"
                 />
-                <button 
+                <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-4 top-1/2 -translate-y-1/2 text-hims-slate hover:text-hims-blue transition-colors"
@@ -199,9 +225,9 @@ const LoginPage: React.FC = () => {
             </div>
 
             <div className="flex items-center gap-3 px-1">
-              <input 
-                type="checkbox" 
-                id="remember" 
+              <input
+                type="checkbox"
+                id="remember"
                 className="w-4 h-4 rounded-md border-slate-300 text-hims-blue focus:ring-hims-blue transition-all cursor-pointer"
               />
               <label htmlFor="remember" className="text-sm font-medium text-hims-slate cursor-pointer select-none">
@@ -209,7 +235,7 @@ const LoginPage: React.FC = () => {
               </label>
             </div>
 
-            <motion.button 
+            <motion.button
               whileHover={{ scale: isLoading ? 1 : 1.01 }}
               whileTap={{ scale: isLoading ? 1 : 0.98 }}
               onClick={handleLogin}
@@ -232,7 +258,7 @@ const LoginPage: React.FC = () => {
 
           <div className="mt-12 text-center">
             <p className="text-hims-slate font-medium">
-              New to HIMS? <Link to="/signup" className="text-hims-blue font-bold hover:underline">Register as a new student</Link>
+              New to HIMS? <Link to="/signup" className="text-hims-blue font-bold hover:underline">Create an account</Link>
             </p>
           </div>
 

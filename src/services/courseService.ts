@@ -22,6 +22,7 @@ export interface Course {
   semester: string;
   status: 'Active' | 'Inactive';
   createdAt: string;
+  credits?: number | string; // ADDED TO RESOLVE TS ERROR
 }
 
 const COURSES_COLLECTION = 'courses';
@@ -36,6 +37,13 @@ export const courseService = {
     } as Course));
   },
 
+  // Get unique registered departments
+  async getAllDepartments(): Promise<string[]> {
+    const courses = await this.getAllCourses();
+    const depts = new Set(courses.map(c => c.department));
+    return Array.from(depts).sort();
+  },
+
   // Get courses by lecturer (Lecturer)
   async getCoursesByLecturer(lecturerId: string): Promise<Course[]> {
     const q = query(collection(db, COURSES_COLLECTION), where("lecturerId", "==", lecturerId));
@@ -46,12 +54,28 @@ export const courseService = {
     } as Course));
   },
 
-  // Get courses for student (Student)
+  // Get courses for student based on automated dept/level match
   async getCoursesForStudent(department: string, level: string): Promise<Course[]> {
     const q = query(
       collection(db, COURSES_COLLECTION), 
       where("department", "==", department),
       where("level", "==", level),
+      where("status", "==", "Active")
+    );
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    } as Course));
+  },
+
+  // Explicit registration search matching 3 parameters
+  async searchCoursesForRegistration(department: string, level: string, semester: string): Promise<Course[]> {
+    const q = query(
+      collection(db, COURSES_COLLECTION),
+      where("department", "==", department),
+      where("level", "==", level),
+      where("semester", "==", semester),
       where("status", "==", "Active")
     );
     const querySnapshot = await getDocs(q);

@@ -11,15 +11,17 @@ import {
   Library, 
   CheckCircle2,
   MonitorPlay,
-  Monitor,
   Clock,
   Loader2,
   LogOut,
-  ChevronRight
+  ChevronRight,
+  GraduationCap,
+  ChevronDown,
+  Filter
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { auth } from '../lib/firebase';
-import { onAuthStateChanged } from 'firebase/auth';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
 import type { Course } from '../services/courseService';
 import { courseService } from '../services/courseService';
 import type { Submission } from '../services/assignmentService';
@@ -33,6 +35,10 @@ const LecturerDashboard: React.FC = () => {
   const [courses, setCourses] = useState<Course[]>([]);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [studentsByLevel, setStudentsByLevel] = useState<{[key: string]: number}>({});
+  const [completionRate, setCompletionRate] = useState(0);
+  const [selectedLevelFilter, setSelectedLevelFilter] = useState('All Levels');
+  const [syncError, setSyncError] = useState<string | null>(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -46,8 +52,44 @@ const LecturerDashboard: React.FC = () => {
 
           const lecturerSubmissions = await assignmentService.getSubmissionsForLecturer(user.uid);
           setSubmissions(lecturerSubmissions);
-        } catch (err) {
+
+          // Dynamic Stats Calculation
+          if (lecturerCourses.length > 0) {
+            const studentResults = await Promise.all(
+              lecturerCourses.map(course => userService.getStudentsByCourse(course.id))
+            );
+            
+            // Group students by level
+            const levelMap: {[key: string]: Set<string>} = {};
+            studentResults.forEach(students => {
+              students.forEach(student => {
+                const level = student.level || 'Unknown Level';
+                if (!levelMap[level]) levelMap[level] = new Set();
+                levelMap[level].add(student.id);
+              });
+            });
+
+            const levelCounts: {[key: string]: number} = {};
+            Object.keys(levelMap).forEach(lvl => {
+              levelCounts[lvl] = levelMap[lvl].size;
+            });
+
+            setStudentsByLevel(levelCounts);
+
+            if (lecturerSubmissions.length > 0) {
+              const gradedCount = lecturerSubmissions.filter(s => s.status === 'GRADED').length;
+              setCompletionRate(Math.round((gradedCount / lecturerSubmissions.length) * 100));
+            } else {
+              setCompletionRate(100);
+            }
+          }
+        } catch (err: any) {
           console.error('Error fetching dashboard data:', err);
+          if (err.code === 'permission-denied') {
+            setSyncError('Restricted Access');
+          } else {
+            setSyncError('Sync Error');
+          }
         } finally {
           setIsLoading(false);
         }
@@ -59,17 +101,21 @@ const LecturerDashboard: React.FC = () => {
 
   const pendingReviews = submissions.filter(s => s.status === 'PENDING').length;
 
+  const totalStudentsFiltered = selectedLevelFilter === 'All Levels' 
+    ? Object.values(studentsByLevel).reduce((a, b) => a + b, 0)
+    : (studentsByLevel[selectedLevelFilter] || 0);
+
   const stats = [
-    { label: 'Total Students', value: isLoading ? '...' : '124', badge: '+0%', badgeColor: 'bg-emerald-50 text-emerald-600', icon: <Users size={20} className="text-blue-600" />, bg: 'bg-blue-50' },
+    { label: selectedLevelFilter === 'All Levels' ? 'Total Students' : `${selectedLevelFilter} Total`, value: isLoading ? '...' : totalStudentsFiltered.toString(), icon: <Users size={20} className="text-blue-600" />, bg: 'bg-blue-50' },
     { label: 'Pending Reviews', value: isLoading ? '...' : pendingReviews.toString(), badge: pendingReviews > 0 ? 'Attention' : 'Clean', badgeColor: pendingReviews > 0 ? 'bg-orange-50 text-orange-600' : 'bg-emerald-50 text-emerald-600', icon: <ClipboardList size={20} className="text-orange-600" />, bg: 'bg-orange-50' },
     { label: 'Active Courses', value: isLoading ? '...' : courses.length.toString(), icon: <Library size={20} className="text-purple-600" />, bg: 'bg-purple-50' },
-    { label: 'Completion Rate', value: '82%', icon: <CheckCircle2 size={20} className="text-blue-600" />, bg: 'bg-blue-50' },
+    { label: 'Grading Progress', value: isLoading ? '...' : `${completionRate}%`, icon: <CheckCircle2 size={20} className="text-emerald-600" />, bg: 'bg-emerald-50' },
   ];
 
   return (
     <div className="flex h-screen bg-slate-50 font-outfit overflow-hidden">
       {/* Sidebar */}
-      <aside className="w-64 bg-white border-r border-slate-200 flex flex-col shrink-0">
+      <aside className="w-72 bg-white border-r border-slate-200 flex flex-col shrink-0">
         <div className="p-8">
           <Link to="/lecturer-dashboard" className="flex flex-col gap-1">
             <div className="flex items-center gap-3">
@@ -123,11 +169,11 @@ const LecturerDashboard: React.FC = () => {
             />
             <div className="overflow-hidden">
               <p className="text-sm font-bold text-slate-900 truncate tracking-tight">{userProfile?.name || 'Loading...'}</p>
-              <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest leading-tight">{userProfile?.role || 'Lecturer'}</p>
+              <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest leading-tight">{userProfile?.role || 'Lecturer'} {userProfile?.matricule ? `• ${userProfile.matricule}` : ''}</p>
             </div>
           </div>
           <button 
-            onClick={() => auth.signOut()}
+            onClick={async () => { await signOut(auth); navigate('/login'); }}
             className="flex items-center justify-center gap-2 w-full mt-4 py-3 bg-slate-50 hover:bg-slate-100 rounded-xl text-[11px] font-extrabold text-slate-600 transition-colors uppercase tracking-wider"
           >
             <LogOut size={14} />
@@ -148,7 +194,14 @@ const LecturerDashboard: React.FC = () => {
           {/* Header */}
           <header className="px-10 py-10 flex justify-between items-start">
             <div>
-              <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-1.5">Lecturer Console</p>
+              <div className="flex items-center gap-2 mb-1.5">
+                <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Lecturer Console</p>
+                {syncError && (
+                  <span className="flex items-center gap-1 text-[9px] font-extrabold text-rose-500 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-100 uppercase tracking-wider">
+                    {syncError}
+                  </span>
+                )}
+              </div>
               <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Welcome back, {userProfile?.name?.split(' ')[0] || 'Lecturer'}!</h1>
             </div>
             
@@ -164,6 +217,30 @@ const LecturerDashboard: React.FC = () => {
           </header>
 
           <div className="px-10 pb-10 space-y-8">
+            {/* Stats Header with Level Filter */}
+            <div className="flex items-end justify-between mb-2">
+              <div>
+                <h2 className="text-[28px] font-extrabold text-slate-800 tracking-tight">University Overview</h2>
+                <p className="text-sm font-medium text-slate-400 mt-1">Real-time student and grading metrics.</p>
+              </div>
+              
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 bg-white border border-slate-100 rounded-2xl px-4 py-2.5 shadow-sm">
+                  <Filter size={14} className="text-slate-400" />
+                  <select 
+                    value={selectedLevelFilter}
+                    onChange={(e) => setSelectedLevelFilter(e.target.value)}
+                    className="bg-transparent border-none text-[12px] font-extrabold text-slate-700 focus:ring-0 cursor-pointer outline-none min-w-[120px]"
+                  >
+                    <option value="All Levels">All Levels</option>
+                    {Object.keys(studentsByLevel).sort().map(level => (
+                      <option key={level} value={level}>{level}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+
             {/* Stats Grid */}
             <div className="grid grid-cols-4 gap-6">
               {stats.map((stat, idx) => (
@@ -188,6 +265,23 @@ const LecturerDashboard: React.FC = () => {
                 </div>
               ))}
             </div>
+            
+            {/* Level Breakdown Display */}
+            {!isLoading && Object.keys(studentsByLevel).length > 0 && (
+              <div className="flex flex-wrap gap-4">
+                {Object.entries(studentsByLevel).sort().map(([level, count]) => (
+                  <div key={level} className="bg-white border border-slate-100 rounded-3xl px-8 py-5 shadow-sm flex items-center gap-5 hover:border-blue-100 transition-all hover:shadow-md">
+                    <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600">
+                      <GraduationCap size={24} />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest leading-none mb-1.5">{level}</p>
+                      <p className="text-[20px] font-extrabold text-slate-900 leading-none">{count} Students</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
 
             {/* Main Grid */}
             <div className="grid grid-cols-3 gap-8">

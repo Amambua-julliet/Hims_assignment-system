@@ -1,5 +1,8 @@
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { auth, db } from '../../lib/firebase';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
 import { 
   LayoutDashboard, 
   Users, 
@@ -50,6 +53,44 @@ interface DashboardLayoutProps {
 
 const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, title, breadcrumb }) => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const [userName, setUserName] = React.useState('Loading...');
+  const [userRole, setUserRole] = React.useState('...');
+  const [userMatricule, setUserMatricule] = React.useState('');
+
+  React.useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        try {
+          const userDoc = await getDoc(doc(db, 'users', user.uid));
+          if (userDoc.exists()) {
+            const data = userDoc.data();
+            setUserName(data.name || 'User');
+            setUserRole(data.role || 'USER');
+            setUserMatricule(data.matricule || '');
+          } else {
+            setUserName('User');
+          }
+        } catch (error) {
+          console.error("Error fetching user data:", error);
+          setUserName('User');
+        }
+      } else {
+        navigate('/login');
+      }
+    });
+
+    return () => unsubscribe();
+  }, [navigate]);
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      navigate('/login');
+    } catch (error) {
+      console.error('Error logging out:', error);
+    }
+  };
 
   const menuItems = [
     { icon: <LayoutDashboard size={20} />, label: 'Dashboard', path: '/dashboard' },
@@ -96,15 +137,15 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, title, brea
         <div className="p-4 border-t border-slate-100">
           <div className="bg-slate-50 rounded-2xl p-4 flex items-center gap-3">
             <img 
-              src="https://ui-avatars.com/api/?name=Mrs.+Caroline&background=0066FF&color=fff" 
+              src={`https://ui-avatars.com/api/?name=${encodeURIComponent(userName)}&background=0066FF&color=fff`}
               alt="Profile" 
               className="w-10 h-10 rounded-xl"
             />
             <div className="flex-1 overflow-hidden">
-              <p className="text-sm font-bold text-hims-dark truncate">Mrs. Caroline</p>
-              <p className="text-[10px] font-semibold text-hims-slate uppercase">System Admin</p>
+              <p className="text-sm font-bold text-hims-dark truncate">{userName}</p>
+              <p className="text-[10px] font-semibold text-hims-slate uppercase">{userRole} {userMatricule && `• ${userMatricule}`}</p>
             </div>
-            <button className="text-hims-slate hover:text-rose-500 transition-colors">
+            <button onClick={handleLogout} className="text-hims-slate hover:text-rose-500 transition-colors cursor-pointer">
               <LogOut size={18} />
             </button>
           </div>
@@ -141,7 +182,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, title, brea
             <div className="h-8 w-px bg-slate-200"></div>
             <div className="flex items-center gap-3">
               <div className="text-right hidden sm:block">
-                <p className="text-xs font-bold text-hims-dark">Mrs. Caroline</p>
+                <p className="text-xs font-bold text-hims-dark">{userName}</p>
                 <p className="text-[10px] font-semibold text-hims-blue">Online</p>
               </div>
             </div>

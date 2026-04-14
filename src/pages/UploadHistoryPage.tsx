@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { auth, db } from '../lib/firebase';
-import { onAuthStateChanged } from 'firebase/auth';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
 import type { UserProfile } from '../services/userService';
 import { userService } from '../services/userService';
 import type { Submission } from '../services/assignmentService';
@@ -92,8 +92,8 @@ const UploadHistoryPage: React.FC = () => {
             { icon: <LayoutDashboard size={18} />, label: 'Dashboard', active: false, path: '/student-dashboard' },
             { icon: <History size={18} />, label: 'Upload History', active: true, path: '/upload-history' },
             { icon: <Star size={18} />, label: 'My Grades', active: false, path: '/student-grades' },
-            { icon: <User size={18} />, label: 'Profile', active: false, path: '#' },
-            { icon: <BookOpen size={18} />, label: 'My Courses', active: false, path: '#' },
+            { icon: <User size={18} />, label: 'Profile', active: false, path: '/student-profile' },
+            { icon: <BookOpen size={18} />, label: 'My Courses', active: false, path: '/student-courses' },
           ].map((item) => (
             <Link
               to={item.path}
@@ -113,7 +113,7 @@ const UploadHistoryPage: React.FC = () => {
 
         <div className="p-8 border-t border-slate-50">
           <button 
-            onClick={() => auth.signOut()}
+            onClick={async () => { await signOut(auth); navigate('/login'); }}
             className="flex items-center gap-3 text-[13px] font-bold text-slate-600 hover:text-rose-500 transition-colors mb-6"
           >
             <LogOut size={18} />

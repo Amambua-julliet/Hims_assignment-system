@@ -5,38 +5,45 @@ import {
   FileText, 
   Bell, 
   Search,
-  Filter,
   ChevronRight,
   LogOut,
   Building2,
-  GraduationCap,
   Clock,
   Star,
   Megaphone,
-  Loader2
+  Loader2,
+  Users,
+  X,
+  User,
+  GraduationCap,
+  CalendarDays
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { auth, db } from '../lib/firebase';
 import { courseService } from '../services/courseService';
 import type { Course } from '../services/courseService';
 import { userService } from '../services/userService';
 import type { UserProfile } from '../services/userService';
-import { onAuthStateChanged } from 'firebase/auth';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
 
 const LecturerCoursesPage: React.FC = () => {
+  const navigate = useNavigate();
   const [courses, setCourses] = useState<Course[]>([]);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  
+  const [selectedCourseRoster, setSelectedCourseRoster] = useState<Course | null>(null);
+  const [courseStudents, setCourseStudents] = useState<UserProfile[]>([]);
+  const [isLoadingRoster, setIsLoadingRoster] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         try {
-          // Fetch user profile to get name/title
           const profile = await userService.getUserById(user.uid);
           setUserProfile(profile);
 
-          // Fetch courses assigned to this lecturer
           const lecturerCourses = await courseService.getCoursesByLecturer(user.uid);
           setCourses(lecturerCourses);
         } catch (err) {
@@ -44,22 +51,36 @@ const LecturerCoursesPage: React.FC = () => {
         } finally {
           setIsLoading(false);
         }
+      } else {
+        navigate('/login');
       }
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [navigate]);
 
-  const [recentSelections] = useState([
-    { level: 'LEVEL 400', dept: 'Computer Science', time: 'Last accessed 2 hours ago' },
-    { level: 'LEVEL 200', dept: 'Software Engineering', time: 'Last accessed yesterday' },
-    { level: 'LEVEL 300', dept: 'Mathematics & Stats', time: 'Last accessed 3 days ago' },
-  ]);
+  const handleViewRoster = async (course: Course) => {
+    setSelectedCourseRoster(course);
+    setIsLoadingRoster(true);
+    try {
+      const students = await userService.getStudentsByCourse(course.id);
+      setCourseStudents(students);
+    } catch (err) {
+      console.error('Failed to load roster', err);
+    } finally {
+      setIsLoadingRoster(false);
+    }
+  };
+
+  const filteredCourses = courses.filter(course => 
+    course.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    course.code.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
-    <div className="flex h-screen bg-slate-50 font-outfit overflow-hidden">
+    <div className="flex h-screen bg-[#fafafa] font-outfit overflow-hidden">
       {/* Sidebar */}
-      <aside className="w-64 bg-white border-r border-slate-200 flex flex-col shrink-0 z-10">
+      <aside className="w-72 bg-white border-r border-slate-200 flex flex-col shrink-0 z-10">
         <div className="p-8">
           <Link to="/lecturer-dashboard" className="flex flex-col gap-1">
             <div className="flex items-center gap-3">
@@ -103,166 +124,191 @@ const LecturerCoursesPage: React.FC = () => {
            ))}
          </nav>
 
-        <div className="p-6 flex flex-col gap-3">
-          <div className="bg-slate-50 rounded-2xl p-4 flex items-center gap-3">
-            <img 
-              src={`https://ui-avatars.com/api/?name=${userProfile?.name || 'User'}&background=0f172a&color=fff`}
-              alt={userProfile?.name} 
-              className="w-10 h-10 rounded-full border-2 border-slate-100"
-            />
-            <div className="overflow-hidden">
-              <p className="text-[13px] font-extrabold text-slate-900 truncate uppercase tracking-tight">{userProfile?.name || 'Loading...'}</p>
-              <p className="text-[10px] font-semibold text-slate-400">{userProfile?.role || 'Lecturer'}</p>
-            </div>
-          </div>
+        <div className="p-6 flex flex-col gap-3 border-t border-slate-50">
           <button 
-            onClick={() => auth.signOut()}
-            className="flex items-center justify-center gap-2 w-full py-3 bg-slate-50 hover:bg-slate-100 rounded-xl text-[11px] font-extrabold text-slate-600 transition-colors uppercase tracking-wider"
+            onClick={async () => { await signOut(auth); navigate('/login'); }}
+            className="flex items-center gap-3 text-sm font-bold text-slate-600 hover:text-rose-500 transition-colors mb-6 w-full px-2"
           >
-            <LogOut size={14} />
+            <LogOut size={18} />
             Logout
           </button>
         </div>
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col overflow-hidden bg-[#fafafa] relative">
+      <main className="flex-1 flex flex-col overflow-hidden relative">
         {isLoading && (
           <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center text-blue-600">
             <Loader2 className="animate-spin mb-4" size={48} />
-            <p className="text-[11px] font-extrabold uppercase tracking-[0.2em]">Synchronizing Portal</p>
+            <p className="text-[11px] font-extrabold uppercase tracking-[0.2em]">Synchronizing Courses...</p>
           </div>
         )}
+
+        {/* Roster Modal */}
+        {selectedCourseRoster && (
+          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-10 font-outfit">
+             <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-4xl max-h-full flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+               {/* Modal Header */}
+               <div className="p-8 border-b border-slate-100 flex items-start justify-between bg-gradient-to-r from-blue-600 to-indigo-700 text-white relative overflow-hidden">
+                 <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full translate-x-32 -translate-y-32 blur-3xl"></div>
+                 <div className="relative z-10">
+                   <div className="flex items-center gap-3 mb-2">
+                     <span className="bg-white/20 backdrop-blur-sm text-white px-3 py-1 text-[10px] font-extrabold uppercase tracking-widest rounded-full border border-white/20 shadow-sm">{selectedCourseRoster.code}</span>
+                     <span className="bg-emerald-500/20 text-emerald-100 px-3 py-1 text-[10px] font-extrabold uppercase tracking-widest rounded-full border border-emerald-500/30">Active Roster</span>
+                   </div>
+                   <h2 className="text-[28px] font-extrabold tracking-tight">{selectedCourseRoster.name}</h2>
+                   <p className="text-blue-100 font-medium text-sm mt-1">{selectedCourseRoster.level} • {selectedCourseRoster.department}</p>
+                 </div>
+                 <button 
+                  onClick={() => setSelectedCourseRoster(null)}
+                  className="w-10 h-10 bg-white/10 hover:bg-white/20 text-white rounded-full flex items-center justify-center backdrop-blur-md transition-colors relative z-10"
+                 >
+                   <X size={20} />
+                 </button>
+               </div>
+
+               {/* Roster List */}
+               <div className="p-8 overflow-y-auto bg-slate-50 flex-1">
+                 {isLoadingRoster ? (
+                   <div className="flex justify-center items-center py-20 text-slate-400">
+                     <Loader2 className="animate-spin" size={32} />
+                   </div>
+                 ) : (
+                   <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden">
+                     {courseStudents.length === 0 ? (
+                       <div className="text-center py-20 px-8">
+                         <div className="w-16 h-16 bg-slate-50 text-slate-300 rounded-full flex items-center justify-center mx-auto mb-4">
+                           <Users size={32} />
+                         </div>
+                         <p className="text-slate-900 font-extrabold text-lg">No Students Registered</p>
+                         <p className="text-slate-400 text-sm mt-1">Students will appear here once they enroll in this course.</p>
+                       </div>
+                     ) : (
+                       <table className="w-full text-left border-collapse">
+                         <thead>
+                           <tr className="border-b border-slate-50 bg-[#fafafa]/50">
+                             <th className="px-8 py-5 text-[11px] font-extrabold text-slate-400 uppercase tracking-widest">STUDENT NAME</th>
+                             <th className="px-8 py-5 text-[11px] font-extrabold text-slate-400 uppercase tracking-widest">MATRICULE</th>
+                             <th className="px-8 py-5 text-[11px] font-extrabold text-slate-400 uppercase tracking-widest">EMAIL</th>
+                             <th className="px-8 py-5 text-[11px] font-extrabold text-slate-400 uppercase tracking-widest">ENROLLED</th>
+                           </tr>
+                         </thead>
+                         <tbody className="divide-y divide-slate-50">
+                           {courseStudents.map((student) => (
+                             <tr key={student.id} className="hover:bg-blue-50/30 transition-colors group">
+                               <td className="px-8 py-5">
+                                 <div className="flex items-center gap-4">
+                                   <img 
+                                      src={`https://ui-avatars.com/api/?name=${student.name}&background=0f172a&color=fff`} 
+                                      className="w-10 h-10 rounded-xl shadow-sm border border-slate-100" 
+                                      alt="avatar" 
+                                   />
+                                   <div>
+                                     <p className="text-[14px] font-extrabold text-slate-800">{student.name}</p>
+                                     <p className="text-[11px] font-bold text-slate-400 mt-0.5">{student.level}</p>
+                                   </div>
+                                 </div>
+                               </td>
+                               <td className="px-8 py-5">
+                                 <span className="font-mono text-[13px] font-bold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-100/50 block w-max">
+                                   {student.matricule || 'PENDING'}
+                                 </span>
+                               </td>
+                               <td className="px-8 py-5">
+                                 <p className="text-[13px] font-semibold text-slate-600">{student.email}</p>
+                               </td>
+                               <td className="px-8 py-5 text-slate-400">
+                                 <CalendarDays size={18} />
+                               </td>
+                             </tr>
+                           ))}
+                         </tbody>
+                       </table>
+                     )}
+                   </div>
+                 )}
+               </div>
+             </div>
+          </div>
+        )}
+
         {/* Header */}
-        <header className="px-10 py-5 shrink-0 flex items-center justify-between bg-white border-b border-slate-100">
+        <header className="px-10 py-6 shrink-0 flex items-center justify-between bg-white border-b border-slate-100 relative z-10">
           <div className="relative w-96">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
             <input 
               type="text" 
-              placeholder="Search courses, students..."
-              className="w-full bg-slate-50 border-none pl-12 pr-4 py-2.5 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-blue-100 outline-none transition-all placeholder:text-slate-400"
+              placeholder="Search assigned courses..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-[#f8fafc] border-none pl-12 pr-4 py-3 rounded-2xl text-[13px] font-semibold focus:ring-2 focus:ring-blue-100 outline-none transition-all placeholder:text-slate-400"
             />
           </div>
           
-          <div className="flex items-center gap-5">
-            <button className="relative text-slate-400 hover:text-slate-600 transition-colors">
-              <Bell size={20} />
-              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-rose-500 rounded-full border border-white"></span>
+          <div className="flex items-center gap-6">
+            <button className="relative w-10 h-10 flex items-center justify-center text-slate-500 bg-white rounded-full shadow-sm border border-slate-100 hover:bg-slate-50 transition-colors">
+              <Bell size={18} />
             </button>
-            <div className="w-10 h-10 bg-slate-600 rounded-full text-white flex items-center justify-center text-sm font-bold shadow-sm ring-2 ring-white cursor-pointer">
-              SA
+            <div className="text-right">
+               <p className="text-[11px] font-extrabold text-slate-800 uppercase tracking-widest">{userProfile?.name || 'Lecturer'}</p>
+               <p className="text-[10px] font-bold text-slate-400 mt-0.5">{userProfile?.department || ''}</p>
             </div>
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto px-10 py-10 no-scrollbar">
-          <div className="space-y-8">
-            <div>
-              <h1 className="text-[28px] font-extrabold text-slate-900 tracking-tight">Welcome back, {userProfile?.name?.split(' ')[0] || 'Lecturer'}.</h1>
-              <p className="text-sm font-medium text-slate-500 mt-1">Select an assigned course to manage submissions and grades.</p>
-            </div>
+        <div className="flex-1 overflow-y-auto px-10 py-10 space-y-10 no-scrollbar">
+          
+          <div>
+            <h1 className="text-[32px] font-extrabold text-slate-900 tracking-tight">Assigned Modules</h1>
+            <p className="text-[15px] font-medium text-slate-500 mt-2">Manage your assigned courses and view class rosters.</p>
+          </div>
 
-            {/* Filter Card */}
-            <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm flex overflow-hidden">
-              {/* Left Side */}
-              <div className="w-5/12 bg-[#f4f8ff] p-12 flex flex-col items-center text-center justify-center border-r border-[#e6efff]">
-                <div className="w-[72px] h-[72px] bg-blue-500 rounded-[20px] flex items-center justify-center text-white mb-6 shadow-xl shadow-blue-200">
-                  <BookOpen size={32} />
-                </div>
-                <h3 className="text-lg font-extrabold text-slate-900 mb-3">Course Management</h3>
-                <p className="text-xs font-semibold text-slate-400 leading-relaxed max-w-[200px]">
-                  Select one of your assigned courses below to begin reviewing student submissions.
-                </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {filteredCourses.length === 0 && !isLoading && (
+              <div className="col-span-full bg-white p-16 rounded-[2rem] border border-dashed border-slate-200 text-center">
+                <BookOpen size={48} className="mx-auto text-slate-200 mb-4" />
+                <p className="text-sm font-bold text-slate-400 uppercase tracking-wider">No Courses Found</p>
+                <p className="text-sm text-slate-500 mt-2">Try adjusting your search query or wait for assignments.</p>
               </div>
+            )}
 
-              {/* Right Side */}
-              <div className="w-7/12 p-14 flex flex-col justify-center">
-                <div className="space-y-6">
-                  <div>
-                    <label className="block text-[11px] font-extrabold text-slate-700 mb-2 uppercase tracking-wide">Select Assigned Course</label>
-                    <div className="relative">
-                      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
-                        <Building2 size={16} />
-                      </div>
-                      <select className="w-full pl-12 pr-4 py-4 bg-white border border-slate-200 rounded-2xl text-[13px] font-bold text-slate-700 appearance-none focus:outline-none focus:ring-2 focus:ring-blue-100 cursor-pointer shadow-sm">
-                        <option value="">Choose Course</option>
-                        {courses.map(course => (
-                          <option key={course.id} value={course.id}>{course.code} - {course.name}</option>
-                        ))}
-                      </select>
-                      <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                        <ChevronRight size={16} className="rotate-90" />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-extrabold text-slate-700 mb-2 uppercase tracking-wide">Student Level</label>
-                    <div className="relative">
-                      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
-                        <GraduationCap size={16} />
-                      </div>
-                      <select className="w-full pl-12 pr-4 py-4 bg-white border border-slate-200 rounded-2xl text-[13px] font-bold text-slate-700 appearance-none focus:outline-none focus:ring-2 focus:ring-blue-100 cursor-pointer shadow-sm">
-                        <option>Select Level</option>
-                        <option>Level 200</option>
-                        <option>Level 300</option>
-                        <option>Level 400</option>
-                      </select>
-                      <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                        <ChevronRight size={16} className="rotate-90" />
-                      </div>
-                    </div>
-                  </div>
-
-                  <button className="w-full flex items-center justify-between px-6 py-4 bg-blue-500 hover:bg-blue-600 transition-colors text-white rounded-2xl font-bold text-sm shadow-xl shadow-blue-200 mt-2">
-                    <span>Proceed to Course Management</span>
-                    <ChevronRight size={18} />
-                  </button>
-                  <p className="text-[9px] font-semibold text-slate-400 italic text-center pt-2">
-                    * Selection will automatically load your assigned courses for this group.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Quick Access */}
-            <div className="pt-2">
-              <div className="flex items-center gap-2 mb-4">
-                <Clock size={12} className="text-slate-400" />
-                <h4 className="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest">Quick Access: Recent Selections</h4>
-              </div>
-              
-              <div className="grid grid-cols-3 gap-5">
-                {recentSelections.map((item, idx) => (
-                  <div key={idx} className="bg-white border border-slate-100 p-5 rounded-2xl shadow-sm hover:shadow-md transition-shadow cursor-pointer group">
-                    <div className="flex justify-between items-center mb-4">
-                      <span className="px-3 py-1.5 bg-blue-50 text-blue-600 rounded-md text-[9px] font-extrabold tracking-wider">
-                        {item.level}
+            {filteredCourses.map(course => (
+               <div key={course.id} className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden flex flex-col group hover:shadow-xl hover:shadow-blue-900/5 transition-all duration-300">
+                  <div className="p-6 pb-4 bg-gradient-to-br from-slate-50 to-white relative overflow-hidden">
+                    <div className="absolute right-0 top-0 w-24 h-24 bg-blue-50 rounded-full translate-x-8 -translate-y-8"></div>
+                    <div className="flex justify-between items-start mb-4 relative z-10">
+                      <span className="bg-white text-slate-600 text-[10px] font-extrabold px-3 py-1.5 rounded-full uppercase tracking-widest border border-slate-100 shadow-sm">
+                        {course.code}
                       </span>
-                      <ChevronRight size={14} className="text-slate-300 group-hover:text-blue-500 transition-colors" />
+                      <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">{course.level}</span>
                     </div>
-                    <div>
-                      <p className="text-xs font-extrabold text-slate-900 truncate tracking-tight">{item.dept}</p>
-                      <p className="text-[9px] font-semibold text-slate-400 mt-1">{item.time}</p>
-                    </div>
+                    <h3 className="text-[18px] font-extrabold text-slate-900 leading-tight mb-2 relative z-10">{course.name}</h3>
+                    <p className="text-[12px] font-semibold text-slate-400 relative z-10 flex items-center gap-1.5">
+                       <Clock size={12} className="text-slate-300" />
+                       {course.semester} Semester • {course.credits} Credits
+                    </p>
                   </div>
-                ))}
-              </div>
-            </div>
+                  
+                  <div className="p-6 pt-0 mt-auto border-t border-slate-50 flex gap-3 bg-white relative z-10">
+                    <button 
+                      onClick={() => handleViewRoster(course)}
+                      className="flex-1 py-3.5 bg-blue-50 hover:bg-blue-600 hover:text-white transition-colors text-blue-600 rounded-xl text-sm font-bold shadow-sm mt-4 flex items-center justify-center gap-2 group/btn"
+                    >
+                      <Users size={16} className="group-hover/btn:scale-110 transition-transform" />
+                      Class Roster
+                    </button>
+                    <button 
+                      onClick={() => navigate('/lecturer-assignments')}
+                      className="w-[52px] h-[52px] bg-white border border-slate-100 shadow-sm hover:bg-slate-50 transition-colors text-slate-500 rounded-xl flex items-center justify-center mt-4 shrink-0"
+                      title="Manage Assignments"
+                    >
+                      <FileText size={20} />
+                    </button>
+                  </div>
+               </div>
+            ))}
           </div>
         </div>
-
-        {/* Footer */}
-        <footer className="px-10 py-8 shrink-0 flex justify-between items-center bg-[#fafafa]">
-          <p className="text-[10px] font-semibold text-slate-400">
-            © 2024 ACADSUBMIT Academic Management System.
-          </p>
-          <div className="flex gap-6 text-[10px] font-semibold text-slate-400">
-            <a href="#" className="hover:text-blue-500 transition-colors">Privacy Policy</a>
-            <a href="#" className="hover:text-blue-500 transition-colors">Support Center</a>
-            <a href="#" className="hover:text-blue-500 transition-colors">Terms of Service</a>
-          </div>
-        </footer>
       </main>
     </div>
   );

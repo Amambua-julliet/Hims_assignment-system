@@ -7,7 +7,8 @@ import {
   updateDoc, 
   deleteDoc, 
   query, 
-  where 
+  where,
+  arrayUnion
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
@@ -17,10 +18,12 @@ export interface UserProfile {
   email: string;
   role: 'ADMIN' | 'LECTURER' | 'STUDENT';
   status: 'ACTIVE' | 'PENDING' | 'INACTIVE';
+  matricule?: string; // Auto-generated ID
   department?: string; // Added for students/lecturers
   level?: string; // Added for students
   avatar?: string;
   createdAt: string;
+  registeredCourseIds?: string[]; // Array of course IDs the student is registered for
 }
 
 const USERS_COLLECTION = 'users';
@@ -74,5 +77,36 @@ export const userService = {
       id: doc.id,
       ...doc.data()
     } as UserProfile));
+  },
+
+  // explicit register
+  async registerForCourse(uid: string, courseId: string): Promise<void> {
+    const docRef = doc(db, USERS_COLLECTION, uid);
+    await updateDoc(docRef, {
+      registeredCourseIds: arrayUnion(courseId)
+    });
+  },
+
+  // Get students registered for a course
+  async getStudentsByCourse(courseId: string): Promise<UserProfile[]> {
+    try {
+      const q = query(
+        collection(db, USERS_COLLECTION),
+        where("role", "==", "STUDENT"),
+        where("registeredCourseIds", "array-contains", courseId)
+      );
+      const querySnapshot = await getDocs(q);
+      return querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as UserProfile));
+    } catch (err: any) {
+      console.error(`Error fetching students for course ${courseId}:`, err);
+      // Special check for permission issues often faced by lecturers
+      if (err.code === 'permission-denied') {
+        console.warn('Lecturer lacks permission to read student roster for this course.');
+      }
+      return [];
+    }
   }
 };

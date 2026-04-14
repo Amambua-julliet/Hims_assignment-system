@@ -22,6 +22,10 @@ const ManageCoursesPage: React.FC = () => {
     status: 'Active' as 'Active' | 'Inactive'
   });
 
+  const [searchTerm, setSearchTerm] = useState('');
+  const [semesterFilter, setSemesterFilter] = useState('All Semesters');
+  const [statusFilter, setStatusFilter] = useState('All Status');
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -41,6 +45,14 @@ const ManageCoursesPage: React.FC = () => {
       setIsLoading(false);
     }
   };
+
+  const filteredCourses = courses.filter(course => {
+    const matchesSearch = course.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                          course.code.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSemester = semesterFilter === 'All Semesters' || course.semester === semesterFilter;
+    const matchesStatus = statusFilter === 'All Status' || course.status === statusFilter;
+    return matchesSearch && matchesSemester && matchesStatus;
+  });
 
   const handleCreateCourse = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -135,14 +147,21 @@ const ManageCoursesPage: React.FC = () => {
                 </div>
                 <div>
                   <label className="block text-[11px] font-extrabold text-hims-slate mb-2 uppercase tracking-wider">Department</label>
-                  <input 
-                    type="text" 
+                  <select 
                     required
-                    placeholder="e.g. Computer Science" 
                     value={newCourse.department}
                     onChange={(e) => setNewCourse({...newCourse, department: e.target.value})}
                     className="w-full bg-slate-50 border-none px-6 py-3.5 rounded-2xl text-sm font-semibold focus:ring-2 focus:ring-hims-blue/10"
-                  />
+                  >
+                    <option value="">Select Department</option>
+                    <option value="Software Engineering">Software Engineering</option>
+                    <option value="Accounting">Accounting</option>
+                    <option value="Management">Management</option>
+                    <option value="Banking and Finance">Banking and Finance</option>
+                    <option value="Marketing">Marketing</option>
+                    <option value="Human Resource Management">Human Resource Management</option>
+                    <option value="Logistics and Supply Chain Management">Logistics and Supply Chain Management</option>
+                  </select>
                 </div>
                 <div>
                   <label className="block text-[11px] font-extrabold text-hims-slate mb-2 uppercase tracking-wider">Level</label>
@@ -197,16 +216,26 @@ const ManageCoursesPage: React.FC = () => {
             <input 
               type="text" 
               placeholder="Search by course name, code, or lecturer..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full bg-slate-50 border-none pl-12 pr-4 py-3 rounded-2xl text-sm focus:ring-2 focus:ring-hims-blue/10"
             />
           </div>
           <div className="flex gap-3 w-full md:w-auto">
-            <select className="bg-slate-50 border-none px-6 py-3 rounded-2xl text-sm font-semibold text-hims-dark focus:ring-2 focus:ring-hims-blue/10 w-full md:w-auto">
+            <select 
+              value={semesterFilter}
+              onChange={(e) => setSemesterFilter(e.target.value)}
+              className="bg-slate-50 border-none px-6 py-3 rounded-2xl text-sm font-semibold text-hims-dark focus:ring-2 focus:ring-hims-blue/10 w-full md:w-auto"
+            >
               <option>All Semesters</option>
               <option>Semester 1</option>
               <option>Semester 2</option>
             </select>
-            <select className="bg-slate-50 border-none px-6 py-3 rounded-2xl text-sm font-semibold text-hims-dark focus:ring-2 focus:ring-hims-blue/10 w-full md:w-auto">
+            <select 
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="bg-slate-50 border-none px-6 py-3 rounded-2xl text-sm font-semibold text-hims-dark focus:ring-2 focus:ring-hims-blue/10 w-full md:w-auto"
+            >
               <option>All Status</option>
               <option>Active</option>
               <option>Inactive</option>
@@ -224,11 +253,11 @@ const ManageCoursesPage: React.FC = () => {
               <Loader2 className="animate-spin mb-4" size={40} />
               <p className="font-bold uppercase tracking-widest text-xs">Fetching academic catalog...</p>
             </div>
-          ) : courses.length === 0 ? (
+          ) : filteredCourses.length === 0 ? (
             <div className="flex-1 flex flex-col items-center justify-center p-20 text-slate-400">
               <BookOpen className="mb-4 text-slate-200" size={60} />
-              <p className="font-bold uppercase tracking-widest text-xs">No courses registered</p>
-              <p className="text-xs mt-2">Create your first course to populate the catalog.</p>
+              <p className="font-bold uppercase tracking-widest text-xs">No courses matching your filters</p>
+              <p className="text-xs mt-2">Adjust your search or filters to see more results.</p>
             </div>
           ) : (
             <>
@@ -244,7 +273,7 @@ const ManageCoursesPage: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
-                  {courses.map((course) => (
+                  {filteredCourses.map((course) => (
                     <tr key={course.id} className="hover:bg-slate-50/30 transition-colors group">
                       <td className="px-8 py-6 font-extrabold text-hims-blue text-sm uppercase">{course.code}</td>
                       <td className="px-8 py-6 font-extrabold text-hims-dark text-sm">{course.name}</td>

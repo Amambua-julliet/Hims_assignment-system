@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import { auth, db } from '../lib/firebase';
-import { onAuthStateChanged } from 'firebase/auth';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { assignmentService } from '../services/assignmentService';
 import type { Submission, Assignment } from '../services/assignmentService';
 import { userService } from '../services/userService';
@@ -147,7 +147,7 @@ const LecturerGradingPage: React.FC = () => {
             </div>
           </div>
           <button 
-            onClick={() => auth.signOut()}
+            onClick={async () => { await signOut(auth); navigate('/login'); }}
             className="flex items-center justify-center gap-2 w-full mt-4 py-3 bg-slate-50 hover:bg-slate-100 rounded-xl text-[11px] font-extrabold text-slate-600 transition-colors uppercase tracking-wider"
           >
             <LogOut size={14} />

@@ -3,7 +3,7 @@ import { User, Lock, Eye, ArrowRight, HelpCircle, ShieldCheck, MapPin, CheckCirc
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import { auth } from '../lib/firebase';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, signOut } from 'firebase/auth';
 import { userService } from '../services/userService';
 import type { UserProfile } from '../services/userService';
 
@@ -12,7 +12,6 @@ const SignupPage: React.FC = () => {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [studentStaffId, setStudentStaffId] = useState('');
   const [role, setRole] = useState<'STUDENT' | 'LECTURER' | 'ADMIN'>('STUDENT');
   const [showRoleDropdown, setShowRoleDropdown] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -26,7 +25,7 @@ const SignupPage: React.FC = () => {
       setError('Please agree to the Terms of Service.');
       return;
     }
-    if (!fullName || !email || !password || !studentStaffId) {
+    if (!fullName || !email || !password) {
       setError('Please fill in all fields.');
       return;
     }
@@ -39,26 +38,27 @@ const SignupPage: React.FC = () => {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
+      const currentYear = new Date().getFullYear().toString().slice(-2);
+      const randomNum = Math.floor(1000 + Math.random() * 9000);
+      const prefix = role === 'STUDENT' ? 'ST' : role === 'LECTURER' ? 'LC' : 'AD';
+      const generatedMatricule = `${prefix}${currentYear}${randomNum}`;
+
       // 2. Create User Profile in Firestore
       const newProfile: UserProfile = {
         id: user.uid,
         name: fullName,
         email: email,
         role: role,
+        matricule: generatedMatricule,
         status: 'ACTIVE',
         createdAt: new Date().toISOString()
       };
 
       await userService.createUserProfile(newProfile);
 
-      // 3. Redirect based on role
-      if (role === 'ADMIN') {
-        navigate('/dashboard');
-      } else if (role === 'LECTURER') {
-        navigate('/lecturer-dashboard');
-      } else {
-        navigate('/student-dashboard');
-      }
+      // 3. Sign out and redirect to login
+      await signOut(auth);
+      navigate('/login');
 
     } catch (err: any) {
       console.error('Signup error:', err);
@@ -192,43 +192,21 @@ const SignupPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Email */}
-              <div className="space-y-1.5">
-                <label className="text-sm font-semibold text-hims-dark/80 block ml-1">
-                  Email Address
-                </label>
-                <div className="relative group">
-                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-hims-slate transition-colors group-focus-within:text-hims-blue">
-                    <Mail size={18} />
-                  </div>
-                  <input 
-                    type="email" 
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="name@hims.edu"
-                    className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-hims-blue focus:ring-1 focus:ring-hims-blue transition-all outline-none"
-                  />
+            <div className="space-y-1.5">
+              <label className="text-sm font-semibold text-hims-dark/80 block ml-1">
+                Email Address
+              </label>
+              <div className="relative group">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-hims-slate transition-colors group-focus-within:text-hims-blue">
+                  <Mail size={18} />
                 </div>
-              </div>
-
-              {/* ID Number */}
-              <div className="space-y-1.5">
-                <label className="text-sm font-semibold text-hims-dark/80 block ml-1">
-                  ID Number
-                </label>
-                <div className="relative group">
-                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-hims-slate transition-colors group-focus-within:text-hims-blue">
-                    <BadgeCheck size={18} />
-                  </div>
-                  <input 
-                    type="text" 
-                    value={studentStaffId}
-                    onChange={(e) => setStudentStaffId(e.target.value)}
-                    placeholder="e.g. FE12345"
-                    className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-hims-blue focus:ring-1 focus:ring-hims-blue transition-all outline-none"
-                  />
-                </div>
+                <input 
+                  type="email" 
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="name@hims.edu"
+                  className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-hims-blue focus:ring-1 focus:ring-hims-blue transition-all outline-none"
+                />
               </div>
             </div>
 

@@ -10,7 +10,9 @@ import {
   Calendar,
   Clock
 } from 'lucide-react';
-import { userService } from '../services/userService';
+import { userService, type UserProfile } from '../services/userService';
+import { courseService } from '../services/courseService';
+import { Link } from 'react-router-dom';
 
 const StatCard: React.FC<{ 
   title: string; 
@@ -41,20 +43,42 @@ const StatCard: React.FC<{
 );
 
 const AdminDashboard: React.FC = () => {
-  const [counts, setCounts] = React.useState({ students: 0, pending: 0, total: 0 });
+  const [counts, setCounts] = React.useState({ students: 0, lecturers: 0, courses: 0, pending: 0 });
+  const [latestUsers, setLatestUsers] = React.useState<UserProfile[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
 
   React.useEffect(() => {
     const fetchStats = async () => {
       try {
-        const allUsers = await userService.getAllUsers();
+        let allUsers: any[] = [];
+        let allCourses: any[] = [];
+
+        try {
+          allUsers = await userService.getAllUsers();
+        } catch (e: any) {
+          console.error("Failed to fetch users:", e);
+        }
+
+        try {
+          allCourses = await courseService.getAllCourses();
+        } catch (e: any) {
+          console.error("Failed to fetch courses:", e);
+        }
+
         setCounts({
-          students: allUsers.filter(u => u.role === 'STUDENT').length,
-          pending: allUsers.filter(u => u.status === 'PENDING').length,
-          total: allUsers.length
+          students: allUsers.filter(u => u.role?.toUpperCase() === 'STUDENT').length,
+          lecturers: allUsers.filter(u => u.role?.toUpperCase() === 'LECTURER').length,
+          courses: allCourses.length,
+          pending: allUsers.filter(u => u.status?.toUpperCase() === 'PENDING').length
         });
+
+        // Get latest 5 users
+        const sortedUsers = [...allUsers].sort((a, b) => 
+          new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+        );
+        setLatestUsers(sortedUsers.slice(0, 5));
       } catch (err) {
-        console.error('Error fetching dashboard stats:', err);
+        console.error('Error in stats logic:', err);
       } finally {
         setIsLoading(false);
       }
@@ -64,16 +88,9 @@ const AdminDashboard: React.FC = () => {
 
   const stats = [
     { title: 'Total Students', value: isLoading ? '...' : counts.students.toLocaleString(), change: '+0%', icon: <Users size={20} />, color: 'bg-blue-500', isPositive: true },
-    { title: 'Active Courses', value: '42', change: '+0%', icon: <BookOpen size={20} />, color: 'bg-indigo-500', isPositive: true },
-    { title: 'Attendance Rate', value: '94.2%', change: '+0%', icon: <CheckCircle2 size={20} />, color: 'bg-emerald-500', isPositive: true },
+    { title: 'Total Lecturers', value: isLoading ? '...' : counts.lecturers.toLocaleString(), change: '+0%', icon: <Users size={20} />, color: 'bg-violet-500', isPositive: true },
+    { title: 'Active Courses', value: isLoading ? '...' : counts.courses.toLocaleString(), change: '+0%', icon: <BookOpen size={20} />, color: 'bg-indigo-500', isPositive: true },
     { title: 'Pending Issues', value: isLoading ? '...' : counts.pending.toString(), change: '0', icon: <AlertCircle size={20} />, color: 'bg-rose-500', isPositive: false },
-  ];
-
-  const recentActivities = [
-    { id: 1, user: 'Dr. John Smith', action: 'Uploaded new course material', target: 'Introduction to Business', time: '10 minutes ago' },
-    { id: 2, user: 'Sarah Johnson', action: 'Submitted assignment', target: 'Marketing Strategy 101', time: '25 minutes ago' },
-    { id: 3, user: 'System', action: 'Automated backup completed', target: 'Daily Snapshot', time: '2 hours ago' },
-    { id: 4, user: 'Admin Caroline', action: 'Updated user permissions', target: 'Staff Member: Robert K.', time: '5 hours ago' },
   ];
 
   return (
@@ -114,47 +131,77 @@ const AdminDashboard: React.FC = () => {
               <option>Yearly</option>
             </select>
           </div>
-          <div className="h-64 flex items-end justify-between gap-2 px-2">
-            {[40, 70, 45, 90, 65, 80, 55, 95, 75, 60, 85, 50].map((h, i) => (
+          <div className="h-64 flex items-end justify-center gap-12 px-2">
+            <div className="flex flex-col items-center gap-4 w-24">
               <motion.div 
-                key={i}
                 initial={{ height: 0 }}
-                animate={{ height: `${h}%` }}
-                transition={{ delay: i * 0.05, duration: 0.8 }}
-                className="w-full bg-slate-100 rounded-t-lg relative group"
+                animate={{ height: counts.students > 0 || counts.lecturers > 0 ? `${(counts.students / (counts.students + counts.lecturers || 1)) * 100}%` : '10%' }}
+                className="w-full bg-hims-blue rounded-t-xl relative group"
               >
-                <div className={`absolute inset-0 bg-hims-blue/20 group-hover:bg-hims-blue transition-all rounded-t-lg ${i === 7 ? 'bg-hims-blue' : ''}`}></div>
+                <div className="absolute -top-8 left-1/2 -translate-x-1/2 text-sm font-bold text-hims-blue">
+                   {counts.students}
+                </div>
               </motion.div>
-            ))}
-          </div>
-          <div className="flex justify-between mt-4 text-[10px] font-bold text-hims-slate uppercase tracking-wider px-2">
-            <span>Jan</span><span>Feb</span><span>Mar</span><span>Apr</span><span>May</span><span>Jun</span><span>Jul</span><span>Aug</span><span>Sep</span><span>Oct</span><span>Nov</span><span>Dec</span>
+              <span className="text-[10px] font-extrabold text-hims-slate uppercase tracking-wider">Students</span>
+            </div>
+
+            <div className="flex flex-col items-center gap-4 w-24">
+              <motion.div 
+                initial={{ height: 0 }}
+                animate={{ height: counts.students > 0 || counts.lecturers > 0 ? `${(counts.lecturers / (counts.students + counts.lecturers || 1)) * 100}%` : '10%' }}
+                className="w-full bg-violet-500 rounded-t-xl relative group"
+              >
+                <div className="absolute -top-8 left-1/2 -translate-x-1/2 text-sm font-bold text-violet-500">
+                   {counts.lecturers}
+                </div>
+              </motion.div>
+              <span className="text-[10px] font-extrabold text-hims-slate uppercase tracking-wider">Lecturers</span>
+            </div>
           </div>
         </div>
 
-        {/* Recent Activity */}
+        {/* Latest Members */}
         <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm">
-          <h3 className="text-xl font-bold text-hims-dark mb-6">Recent Activity</h3>
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-xl font-bold text-hims-dark">Latest Members</h3>
+            <Link to="/user-management" className="text-xs font-bold text-hims-blue hover:underline uppercase tracking-wider">View All</Link>
+          </div>
           <div className="space-y-6">
-            {recentActivities.map((activity) => (
-              <div key={activity.id} className="flex gap-4">
-                <div className="mt-1">
-                  <div className="w-2 h-2 rounded-full bg-hims-blue ring-4 ring-hims-blue/10"></div>
+            {latestUsers.length === 0 && !isLoading && (
+              <p className="text-sm text-hims-slate text-center py-4">No recent signups found.</p>
+            )}
+            {latestUsers.map((user) => (
+              <div key={user.id} className="flex gap-4 group">
+                <div className="relative shrink-0">
+                  <img 
+                    src={`https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=f1f5f9&color=64748b&bold=true`}
+                    alt={user.name}
+                    className="w-11 h-11 rounded-xl object-cover border border-slate-100 group-hover:border-hims-blue/30 transition-colors"
+                  />
+                  <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white ${
+                    user.role?.toUpperCase() === 'STUDENT' ? 'bg-blue-500' : 'bg-violet-500'
+                  }`} />
                 </div>
-                <div className="flex-1">
-                  <p className="text-sm font-bold text-hims-dark">{activity.user}</p>
-                  <p className="text-xs text-hims-slate mt-0.5">{activity.action} <span className="text-hims-blue font-semibold">{activity.target}</span></p>
-                  <div className="flex items-center gap-1 mt-2 text-[10px] font-bold text-hims-slate/60 uppercase tracking-tight">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-bold text-hims-dark truncate">{user.name}</p>
+                    <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded uppercase tracking-tighter shrink-0 ${
+                      user.role?.toUpperCase() === 'STUDENT' 
+                        ? 'bg-blue-50 text-blue-600' 
+                        : 'bg-violet-50 text-violet-600'
+                    }`}>
+                      {user.role}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-hims-slate truncate mt-0.5 font-medium">{user.email}</p>
+                  <div className="flex items-center gap-1 mt-1 text-[9px] font-bold text-hims-slate/50 uppercase tracking-tighter">
                     <Clock size={10} />
-                    {activity.time}
+                    Joined {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'Recently'}
                   </div>
                 </div>
               </div>
             ))}
           </div>
-          <button className="w-full mt-8 py-3 rounded-xl border border-dashed border-slate-200 text-hims-slate text-sm font-bold hover:bg-slate-50 hover:border-slate-300 transition-all">
-            View All Activity
-          </button>
         </div>
       </div>
     </div>

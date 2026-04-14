@@ -8,6 +8,9 @@ const UserManagementPage: React.FC = () => {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [roleFilter, setRoleFilter] = useState('All Roles');
+  const [statusFilter, setStatusFilter] = useState('All Status');
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     fetchUsers();
@@ -39,10 +42,19 @@ const UserManagementPage: React.FC = () => {
 
   const getStats = () => {
     const total = users.length;
-    const students = users.filter(u => u.role === 'STUDENT').length;
-    const pending = users.filter(u => u.status === 'PENDING').length;
+    const students = users.filter(u => u.role?.toUpperCase() === 'STUDENT').length;
+    const pending = users.filter(u => u.status?.toUpperCase() === 'PENDING').length;
     return { total, students, pending };
   };
+
+  const filteredUsers = users.filter(user => {
+    const matchesRole = roleFilter === 'All Roles' || user.role?.toUpperCase() === roleFilter.toUpperCase();
+    const matchesStatus = statusFilter === 'All Status' || user.status?.toUpperCase() === statusFilter.toUpperCase();
+    const matchesSearch = user.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                         user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         user.matricule?.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesRole && matchesStatus && matchesSearch;
+  });
 
   const statsCount = getStats();
 
@@ -120,15 +132,34 @@ const UserManagementPage: React.FC = () => {
         <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden flex flex-col min-h-[400px]">
           {/* Filters Container */}
           <div className="p-6 border-b border-slate-50 flex flex-col md:flex-row gap-4 items-center justify-between">
-             <div className="flex items-center gap-4">
+             <div className="flex flex-wrap items-center gap-4">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                  <input 
+                    type="text"
+                    placeholder="Search name, email, ID..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10 pr-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-sm focus:ring-1 focus:ring-hims-blue outline-none w-64 transition-all"
+                  />
+                </div>
+                <div className="h-6 w-px bg-slate-200 hidden md:block"></div>
                 <span className="text-sm font-bold text-hims-slate">Filters:</span>
-                <select className="bg-white border-none py-2 rounded-xl text-sm font-bold text-hims-dark cursor-pointer outline-none hover:text-hims-blue flex items-center gap-2">
+                <select 
+                  value={roleFilter}
+                  onChange={(e) => setRoleFilter(e.target.value)}
+                  className="bg-white border-none py-2 rounded-xl text-sm font-bold text-hims-dark cursor-pointer outline-none hover:text-hims-blue flex items-center gap-2"
+                >
                   <option>All Roles</option>
                   <option>Student</option>
                   <option>Lecturer</option>
                   <option>Admin</option>
                 </select>
-                <select className="bg-white border-none py-2 rounded-xl text-sm font-bold text-hims-dark cursor-pointer outline-none hover:text-hims-blue flex items-center gap-2">
+                <select 
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="bg-white border-none py-2 rounded-xl text-sm font-bold text-hims-dark cursor-pointer outline-none hover:text-hims-blue flex items-center gap-2"
+                >
                   <option>All Status</option>
                   <option>Active</option>
                   <option>Pending</option>
@@ -155,11 +186,11 @@ const UserManagementPage: React.FC = () => {
               <AlertCircle className="mb-4" size={40} />
               <p className="font-bold text-sm">{error}</p>
             </div>
-          ) : users.length === 0 ? (
+          ) : filteredUsers.length === 0 ? (
             <div className="flex-1 flex flex-col items-center justify-center p-20 text-slate-400">
               <Users className="mb-4 text-slate-200" size={60} />
-              <p className="font-bold uppercase tracking-widest text-xs">No users found in database</p>
-              <p className="text-xs mt-2">Add your first user to get started.</p>
+              <p className="font-bold uppercase tracking-widest text-xs">No users match your criteria</p>
+              <p className="text-xs mt-2">Try adjusting your filters or search query.</p>
             </div>
           ) : (
             <table className="w-full">
@@ -173,7 +204,7 @@ const UserManagementPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
-                {users.map((user) => (
+                {filteredUsers.map((user) => (
                   <tr key={user.id} className="hover:bg-slate-50/50 transition-colors group">
                     <td className="px-8 py-6">
                       <div className="flex items-center gap-4">
