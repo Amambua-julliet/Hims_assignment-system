@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import DashboardLayout from '../components/layout/DashboardLayout';
-import { Users, User, ClipboardList, Plus, Edit2, Trash2, TrendingUp, AlertCircle, X, Loader2 } from 'lucide-react';
+import { Users, User, ClipboardList, Plus, Edit2, Trash2, TrendingUp, AlertCircle, X, Loader2, Search } from 'lucide-react';
 import { userService } from '../services/userService';
 import type { UserProfile } from '../services/userService';
 
@@ -33,7 +32,7 @@ const UserManagementPage: React.FC = () => {
     if (window.confirm('Are you sure you want to delete this user?')) {
       try {
         await userService.deleteUserProfile(uid);
-        setUsers(users.filter(u => u.id !== uid));
+        setUsers(users.filter((u: UserProfile) => u.id !== uid));
       } catch (err) {
         alert('Failed to delete user.');
       }
@@ -42,12 +41,12 @@ const UserManagementPage: React.FC = () => {
 
   const getStats = () => {
     const total = users.length;
-    const students = users.filter(u => u.role?.toUpperCase() === 'STUDENT').length;
-    const pending = users.filter(u => u.status?.toUpperCase() === 'PENDING').length;
+    const students = users.filter((u: UserProfile) => u.role?.toUpperCase() === 'STUDENT').length;
+    const pending = users.filter((u: UserProfile) => u.status?.toUpperCase() === 'PENDING').length;
     return { total, students, pending };
   };
 
-  const filteredUsers = users.filter(user => {
+  const filteredUsers = users.filter((user: UserProfile) => {
     const matchesRole = roleFilter === 'All Roles' || user.role?.toUpperCase() === roleFilter.toUpperCase();
     const matchesStatus = statusFilter === 'All Status' || user.status?.toUpperCase() === statusFilter.toUpperCase();
     const matchesSearch = user.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -59,10 +58,7 @@ const UserManagementPage: React.FC = () => {
   const statsCount = getStats();
 
   return (
-    <DashboardLayout 
-      title="User Management" 
-      breadcrumb="Manage and monitor all university portal accounts in one place."
-    >
+    <div className="p-0">
       <div className="space-y-6">
         {/* Top Header Actions */}
         <div className="flex justify-end mb-6">
@@ -259,7 +255,7 @@ const UserManagementPage: React.FC = () => {
           )}
         </div>
       </div>
-    </DashboardLayout>
+    </div>
   );
 };
 

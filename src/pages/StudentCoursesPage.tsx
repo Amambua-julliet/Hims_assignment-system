@@ -1,24 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import {
-  LayoutDashboard,
   BookOpen,
-  Star,
-  History,
-  Search,
-  Bell,
-  User,
-  LogOut,
   Loader2,
   Clock,
   ChevronRight,
   Plus,
   X,
   CheckCircle2,
-  Filter
+  Filter,
+  Search
 } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { auth } from '../lib/firebase';
-import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { onAuthStateChanged } from 'firebase/auth';
 import { userService } from '../services/userService';
 import type { UserProfile } from '../services/userService';
 import { courseService } from '../services/courseService';
@@ -91,7 +85,7 @@ const StudentCoursesPage: React.FC = () => {
     }
   };
 
-  const registeredCourses = courses.filter(c => userProfile?.registeredCourseIds?.includes(c.id));
+  const registeredCourses = courses.filter((c: Course) => userProfile?.registeredCourseIds?.includes(c.id));
 
   const handleSearchCourses = async () => {
     if (!searchDept || !searchLevel || !searchSemester) return;
@@ -99,7 +93,7 @@ const StudentCoursesPage: React.FC = () => {
     try {
       const results = await courseService.searchCoursesForRegistration(searchDept, searchLevel, searchSemester);
       // Filter out courses already registered
-      const filteredResults = results.filter(c => !userProfile?.registeredCourseIds?.includes(c.id));
+      const filteredResults = results.filter((c: Course) => !userProfile?.registeredCourseIds?.includes(c.id));
       setSearchResults(filteredResults);
     } catch (err) {
       console.error("Failed to search courses", err);
@@ -133,8 +127,8 @@ const StudentCoursesPage: React.FC = () => {
       } : prev);
 
       // also push missing courses into main state if they searched cross-dept
-      const newlyRegisteredCourses = searchResults.filter(c => idsToRegister.includes(c.id));
-      setCourses(prev => [...prev, ...newlyRegisteredCourses.filter(nc => !prev.find(p => p.id === nc.id))]);
+      const newlyRegisteredCourses = searchResults.filter((c: Course) => idsToRegister.includes(c.id));
+      setCourses((prev: Course[]) => [...prev, ...newlyRegisteredCourses.filter((nc: Course) => !prev.find((p: Course) => p.id === nc.id))]);
 
       setShowSuccess(true);
       setTimeout(() => {
@@ -162,9 +156,9 @@ const StudentCoursesPage: React.FC = () => {
         registeredCourseIds: [...(prev.registeredCourseIds || []), courseId]
       } : prev);
 
-      const registeredCourse = searchResults.find(c => c.id === courseId);
+      const registeredCourse = searchResults.find((c: Course) => c.id === courseId);
       if (registeredCourse) {
-        setCourses(prev => [...prev, registeredCourse]);
+        setCourses((prev: Course[]) => [...prev, registeredCourse]);
       }
 
       setShowSuccess(true);
@@ -181,107 +175,26 @@ const StudentCoursesPage: React.FC = () => {
   };
 
   return (
-    <div className="flex h-screen bg-[#fafafa] font-outfit overflow-hidden text-slate-900">
-      {/* Sidebar */}
-      <aside className="w-72 bg-white border-r border-slate-100 flex flex-col shrink-0 z-10">
-        <div className="p-8">
-          <Link to="/student-dashboard" className="flex flex-col gap-1">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center p-1.5 shadow-md shadow-blue-200">
-                <div className="grid grid-cols-2 gap-0.5 w-full h-full">
-                  <div className="bg-white rounded-sm"></div>
-                  <div className="bg-white/40 rounded-sm"></div>
-                  <div className="bg-white/40 rounded-sm"></div>
-                  <div className="bg-white rounded-sm"></div>
-                </div>
-              </div>
-              <div className="flex flex-col">
-                <span className="text-[15px] font-extrabold text-blue-600 tracking-tight leading-tight">ACADSUBMIT</span>
-                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-tight mt-0.5">HIMS Buea</span>
-              </div>
-            </div>
-          </Link>
+    <div className="space-y-8">
+      {isLoading && (
+        <div className="fixed inset-0 bg-white/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center text-blue-600">
+          <Loader2 className="animate-spin mb-4" size={48} />
+          <p className="text-[11px] font-extrabold uppercase tracking-[0.2em]">Loading Courses</p>
         </div>
+      )}
 
-        <nav className="flex-1 px-4 space-y-1.5">
-          {[
-            { icon: <LayoutDashboard size={18} />, label: 'Dashboard', active: false, path: '/student-dashboard' },
-            { icon: <BookOpen size={18} />, label: 'My Courses', active: true, path: '/student-courses' },
-            { icon: <Star size={18} />, label: 'My Grades', active: false, path: '/student-grades' },
-            { icon: <History size={18} />, label: 'Upload History', active: false, path: '/upload-history' },
-            { icon: <User size={18} />, label: 'Profile', active: false, path: '/student-profile' },
-          ].map((item) => (
-            <Link
-              to={item.path}
-              key={item.label}
-              className={`w-full flex items-center gap-4 px-5 py-4 rounded-xl text-sm font-bold transition-all ${item.active
-                ? 'bg-blue-50 text-blue-600 shadow-sm'
-                : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
-                }`}
-            >
-              <div className={item.active ? 'text-blue-600 font-bold' : 'text-slate-400'}>
-                {item.icon}
-              </div>
-              {item.label}
-            </Link>
-          ))}
-        </nav>
-
-        <div className="p-8 border-t border-slate-50">
-          <button
-            onClick={async () => { await signOut(auth); navigate('/login'); }}
-            className="flex items-center gap-3 text-sm font-bold text-slate-600 hover:text-rose-500 transition-colors mb-6"
-          >
-            <LogOut size={18} />
-            Logout
-          </button>
-        </div>
-      </aside>
-
-      {/* Main Content */}
-      <main className="flex-1 flex flex-col overflow-hidden relative">
-        {isLoading && (
-          <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center text-blue-600">
-            <Loader2 className="animate-spin mb-4" size={48} />
-            <p className="text-[11px] font-extrabold uppercase tracking-[0.2em]">Loading Courses</p>
-          </div>
-        )}
-
-        {/* Header */}
-        <header className="px-10 py-6 shrink-0 flex items-center justify-between bg-white border-b border-slate-50">
-          <div className="relative w-96">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-            <input
-              type="text"
-              placeholder="Search active courses..."
-              className="w-full bg-[#f8fafc] border-none pl-12 pr-4 py-3 rounded-2xl text-[13px] font-semibold focus:ring-2 focus:ring-blue-100 outline-none transition-all placeholder:text-slate-400"
-            />
-          </div>
-
-          <div className="flex items-center gap-6">
-            <button className="relative w-10 h-10 flex items-center justify-center text-slate-500 bg-white rounded-full shadow-sm border border-slate-100 hover:bg-slate-50 transition-colors">
-              <Bell size={18} />
-              <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-rose-500 rounded-full border border-white"></span>
-            </button>
-            <div className="text-right">
-              <p className="text-[11px] font-extrabold text-slate-800 leading-tight">{new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{userProfile?.department} • {userProfile?.level}</p>
-            </div>
-            <img
-              src={`https://ui-avatars.com/api/?name=${userProfile?.name || 'User'}&background=0f172a&color=fff`}
-              alt="Profile"
-              className="w-10 h-10 rounded-xl border border-slate-100 shadow-sm"
-            />
-          </div>
-        </header>
-
-        <div className="flex-1 overflow-y-auto px-10 py-10 no-scrollbar">
+      {/* Page Title */}
+      <div className="flex flex-col gap-1">
+        <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Academic Enrollment</p>
+        <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Course Management</h1>
+        <p className="text-[15px] font-medium text-slate-500">View your current modules or register for new semester courses.</p>
+      </div>
 
           {/* Main Top Actions */}
-          <div className="flex items-center justify-between mb-10">
+          <div className="flex items-center justify-between mt-6 mb-10">
             <div>
-              <h1 className="text-[32px] font-extrabold text-slate-900 tracking-tight">My Registered Modules</h1>
-              <p className="text-[15px] font-medium text-slate-500 mt-2">You are officially enrolled in {registeredCourses.length} courses for this semester.</p>
+              <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Active Enrollment</h2>
+              <p className="text-sm font-medium text-slate-500 mt-1">You are currently enrolled in {registeredCourses.length} courses.</p>
             </div>
             <button
               onClick={() => setShowRegModal(true)}
@@ -300,7 +213,7 @@ const StudentCoursesPage: React.FC = () => {
                 <p className="text-sm text-slate-500 mt-2">Click the "Register New Courses" button above to begin your semester.</p>
               </div>
             )}
-            {registeredCourses.map((course) => (
+            {registeredCourses.map((course: Course) => (
               <div key={course.id} className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden group hover:shadow-xl hover:shadow-blue-900/5 transition-all duration-300 flex flex-col">
                 <div className="h-32 bg-gradient-to-br from-blue-600 to-indigo-700 relative p-6 flex flex-col justify-between overflow-hidden">
                   <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full translate-x-8 -translate-y-8 blur-2xl"></div>
@@ -345,11 +258,10 @@ const StudentCoursesPage: React.FC = () => {
               </div>
             ))}
           </div>
-        </div>
 
         {/* REGISTRATION MODAL */}
         {showRegModal && (
-          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-6 font-outfit">
+          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100] flex items-center justify-center p-6 font-outfit">
             <div className="bg-white w-full max-w-4xl max-h-[90vh] rounded-[2.5rem] shadow-2xl flex flex-col animate-in fade-in zoom-in-95 duration-200 overflow-hidden">
               {/* Modal Header */}
               <div className="px-10 py-8 border-b border-slate-100 flex items-center justify-between bg-slate-50">
@@ -426,7 +338,7 @@ const StudentCoursesPage: React.FC = () => {
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      {searchResults.map(course => (
+                      {searchResults.map((course: Course) => (
                         <div
                           key={course.id}
                           onClick={() => toggleSelection(course.id)}
@@ -496,10 +408,8 @@ const StudentCoursesPage: React.FC = () => {
             </div>
           </div>
         )}
-
-      </main>
-    </div>
-  );
-};
+      </div>
+    );
+  };
 
 export default StudentCoursesPage;

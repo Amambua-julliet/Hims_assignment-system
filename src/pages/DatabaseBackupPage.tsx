@@ -1,5 +1,4 @@
 import React from 'react';
-import DashboardLayout from '../components/layout/DashboardLayout';
 import { Database, Clock, Cloud, CheckCircle2, RefreshCw, Filter, Search, Download, Info, Settings } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -12,7 +11,7 @@ const DatabaseBackupPage: React.FC = () => {
   ];
 
   return (
-    <DashboardLayout title="Database Backup" breadcrumb="Manage and monitor HIMS Buea system backups">
+    <div className="p-0">
       <div className="space-y-8">
         {/* Header Actions */}
         <div className="flex justify-end gap-3 mb-6">
@@ -178,7 +177,7 @@ const DatabaseBackupPage: React.FC = () => {
           </div>
         </div>
       </div>
-    </DashboardLayout>
+    </div>
   );
 };
 

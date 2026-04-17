@@ -14,7 +14,12 @@ import {
   LogOut,
   Bell,
   Search,
-  ChevronRight
+  ChevronRight,
+  FileText,
+  ClipboardList,
+  FileCheck,
+  Award,
+  User
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -92,15 +97,42 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, title, brea
     }
   };
 
-  const menuItems = [
-    { icon: <LayoutDashboard size={20} />, label: 'Dashboard', path: '/dashboard' },
-    { icon: <Users size={20} />, label: 'User Management', path: '/users' },
-    { icon: <BookOpen size={20} />, label: 'Manage Courses', path: '/courses' },
-    { icon: <FileBarChart size={20} />, label: 'Reports', path: '/reports' },
-    { icon: <History size={20} />, label: 'System Logs', path: '/logs' },
-    { icon: <Database size={20} />, label: 'Database Backup', path: '/backup' },
-    { icon: <Settings size={20} />, label: 'Settings', path: '/settings' },
-  ];
+  const getMenuItems = () => {
+    const role = userRole?.toUpperCase();
+    
+    if (role === 'LECTURER') {
+      return [
+        { icon: <LayoutDashboard size={20} />, label: 'Dashboard', path: '/lecturer-dashboard' },
+        { icon: <BookOpen size={20} />, label: 'My Courses', path: '/lecturer-courses' },
+        { icon: <FileText size={20} />, label: 'Assignments', path: '/lecturer-assignments' },
+        { icon: <ClipboardList size={20} />, label: 'Grading Feed', path: '/lecturer-grading' },
+      ];
+    }
+    
+    if (role === 'STUDENT') {
+      return [
+        { icon: <LayoutDashboard size={20} />, label: 'Dashboard', path: '/student-dashboard' },
+        { icon: <BookOpen size={20} />, label: 'My Courses', path: '/student-courses' },
+        { icon: <FileCheck size={20} />, label: 'My Assignments', path: '/student-assignments' },
+        { icon: <Award size={20} />, label: 'Student Grades', path: '/student-grades' },
+        { icon: <History size={20} />, label: 'Upload History', path: '/upload-history' },
+        { icon: <User size={20} />, label: 'My Profile', path: '/student-profile' },
+      ];
+    }
+    
+    // Default Admin Menu
+    return [
+      { icon: <LayoutDashboard size={20} />, label: 'Dashboard', path: '/dashboard' },
+      { icon: <Users size={20} />, label: 'User Management', path: '/users' },
+      { icon: <BookOpen size={20} />, label: 'Manage Courses', path: '/courses' },
+      { icon: <FileBarChart size={20} />, label: 'Reports', path: '/reports' },
+      { icon: <History size={20} />, label: 'System Logs', path: '/logs' },
+      { icon: <Database size={20} />, label: 'Database Backup', path: '/backup' },
+      { icon: <Settings size={20} />, label: 'Settings', path: '/settings' },
+    ];
+  };
+
+  const menuItems = getMenuItems();
 
   const activePageLabel = menuItems.find(item => item.path === location.pathname)?.label || title || 'Dashboard';
 

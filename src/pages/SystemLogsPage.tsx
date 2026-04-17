@@ -1,5 +1,4 @@
 import React from 'react';
-import DashboardLayout from '../components/layout/DashboardLayout';
 import { 
   Activity, 
   AlertTriangle, 
@@ -24,7 +23,7 @@ const SystemLogsPage: React.FC = () => {
   ];
 
   return (
-    <DashboardLayout title="System Logs" breadcrumb="Monitor all portal activities and administrative actions across HIMS Buea.">
+    <div className="p-0">
       <div className="space-y-6">
         {/* Header Actions */}
         <div className="flex justify-end gap-3 mb-6">
@@ -181,7 +180,7 @@ const SystemLogsPage: React.FC = () => {
            <p className="text-[10px] font-bold text-hims-slate/50 uppercase tracking-[0.2em]">HIMS Buea Portal Management</p>
         </div>
       </div>
-    </DashboardLayout>
+    </div>
   );
 };
 

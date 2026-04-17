@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import DashboardLayout from '../components/layout/DashboardLayout';
 import { BookOpen, Users, Plus, Search, Filter, Edit2, Trash2, CheckCircle2, Loader2, X } from 'lucide-react';
 import { courseService } from '../services/courseService';
 import type { Course } from '../services/courseService';
@@ -46,7 +45,7 @@ const ManageCoursesPage: React.FC = () => {
     }
   };
 
-  const filteredCourses = courses.filter(course => {
+  const filteredCourses = courses.filter((course: Course) => {
     const matchesSearch = course.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           course.code.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesSemester = semesterFilter === 'All Semesters' || course.semester === semesterFilter;
@@ -56,7 +55,7 @@ const ManageCoursesPage: React.FC = () => {
 
   const handleCreateCourse = async (e: React.FormEvent) => {
     e.preventDefault();
-    const lecturer = lecturers.find(l => l.id === newCourse.lecturerId);
+    const lecturer = lecturers.find((l: UserProfile) => l.id === newCourse.lecturerId);
     if (!lecturer) return alert('Please select a lecturer');
 
     try {
@@ -82,7 +81,7 @@ const ManageCoursesPage: React.FC = () => {
     if (window.confirm('Are you sure you want to delete this course?')) {
       try {
         await courseService.deleteCourse(id);
-        setCourses(courses.filter(c => c.id !== id));
+        setCourses(courses.filter((c: Course) => c.id !== id));
       } catch (err) {
         alert('Failed to delete course');
       }
@@ -90,7 +89,7 @@ const ManageCoursesPage: React.FC = () => {
   };
 
   return (
-    <DashboardLayout title="Manage Courses" breadcrumb="Review and organize academic offerings for the current session.">
+    <div className="p-0">
       <div className="space-y-6">
         {/* Top Header Actions */}
         <div className="flex justify-end mb-6">
@@ -351,7 +350,7 @@ const ManageCoursesPage: React.FC = () => {
           </div>
         </div>
       </div>
-    </DashboardLayout>
+    </div>
   );
 };
 

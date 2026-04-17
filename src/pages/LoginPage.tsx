@@ -86,7 +86,7 @@ const LoginPage: React.FC = () => {
     <div className="flex flex-col md:flex-row min-h-screen w-full font-outfit bg-white overflow-hidden">
       {/* Left Section - Hero */}
       <motion.div
-        initial={{ opacity: 0, x: -20 }}
+        initial={{ opacity: 1, x: -20 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.8, ease: "easeOut" }}
         className="relative flex-1 hidden md:flex flex-col justify-between p-12 text-white overflow-hidden"
@@ -156,7 +156,7 @@ const LoginPage: React.FC = () => {
 
       {/* Right Section - Login Form */}
       <motion.div
-        initial={{ opacity: 0, x: 20 }}
+        initial={{ opacity: 1, x: 20 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.8, ease: "easeOut" }}
         className="flex-1 flex flex-col justify-center items-center p-8 md:p-16 lg:p-24 bg-white"

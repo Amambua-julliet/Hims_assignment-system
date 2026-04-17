@@ -3,7 +3,6 @@ import { motion } from 'framer-motion';
 import { 
   Users, 
   BookOpen, 
-  CheckCircle2, 
   AlertCircle, 
   TrendingUp,
   ArrowUpRight,

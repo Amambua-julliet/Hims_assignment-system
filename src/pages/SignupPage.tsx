@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User, Lock, Eye, ArrowRight, HelpCircle, ShieldCheck, MapPin, CheckCircle2, Mail, BadgeCheck, Loader2, ChevronDown, GraduationCap, Briefcase, Shield } from 'lucide-react';
+import { User, Lock, Eye, ArrowRight, HelpCircle, ShieldCheck, MapPin, CheckCircle2, Mail, Loader2, ChevronDown, GraduationCap, Briefcase, Shield } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import { auth } from '../lib/firebase';
@@ -18,6 +18,20 @@ const SignupPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [isAgreed, setIsAgreed] = useState(false);
+  const [department, setDepartment] = useState('');
+  const [level, setLevel] = useState('');
+
+  const departments = [
+    "Software Engineering", 
+    "Accounting", 
+    "Management", 
+    "Banking and Finance", 
+    "Marketing", 
+    "Human Resource Management", 
+    "Logistics and Supply Chain Management"
+  ];
+
+  const levels = ["Level 200", "Level 300", "Level 400"];
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,6 +41,16 @@ const SignupPage: React.FC = () => {
     }
     if (!fullName || !email || !password) {
       setError('Please fill in all fields.');
+      return;
+    }
+
+    if (role === 'STUDENT' && (!department || !level)) {
+      setError('Please select your Department and Academic Level.');
+      return;
+    }
+
+    if (role === 'LECTURER' && !department) {
+      setError('Please select your Department.');
       return;
     }
 
@@ -44,7 +68,7 @@ const SignupPage: React.FC = () => {
       const generatedMatricule = `${prefix}${currentYear}${randomNum}`;
 
       // 2. Create User Profile in Firestore
-      const newProfile: UserProfile = {
+      const newProfile: any = {
         id: user.uid,
         name: fullName,
         email: email,
@@ -54,7 +78,10 @@ const SignupPage: React.FC = () => {
         createdAt: new Date().toISOString()
       };
 
-      await userService.createUserProfile(newProfile);
+      if (department) newProfile.department = department;
+      if (role === 'STUDENT' && level) newProfile.level = level;
+
+      await userService.createUserProfile(newProfile as UserProfile);
 
       // 3. Sign out and redirect to login
       await signOut(auth);
@@ -297,6 +324,58 @@ const SignupPage: React.FC = () => {
                 </button>
               </div>
             </div>
+
+            {/* Department (Students & Lecturers) */}
+            {(role === 'STUDENT' || role === 'LECTURER') && (
+              <motion.div 
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                className="space-y-1.5"
+              >
+                <label className="text-sm font-semibold text-hims-dark/80 block ml-1">
+                  Department
+                </label>
+                <div className="relative">
+                  <select
+                    value={department}
+                    onChange={(e) => setDepartment(e.target.value)}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-hims-blue focus:ring-1 focus:ring-hims-blue transition-all outline-none appearance-none cursor-pointer"
+                  >
+                    <option value="">Select Department</option>
+                    {departments.map((dept) => (
+                      <option key={dept} value={dept}>{dept}</option>
+                    ))}
+                  </select>
+                  <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-hims-slate pointer-events-none" size={18} />
+                </div>
+              </motion.div>
+            )}
+
+            {/* Level (Students Only) */}
+            {role === 'STUDENT' && (
+              <motion.div 
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                className="space-y-1.5"
+              >
+                <label className="text-sm font-semibold text-hims-dark/80 block ml-1">
+                  Academic Level
+                </label>
+                <div className="relative">
+                  <select
+                    value={level}
+                    onChange={(e) => setLevel(e.target.value)}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-hims-blue focus:ring-1 focus:ring-hims-blue transition-all outline-none appearance-none cursor-pointer"
+                  >
+                    <option value="">Select Level</option>
+                    {levels.map((lvl) => (
+                      <option key={lvl} value={lvl}>{lvl}</option>
+                    ))}
+                  </select>
+                  <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-hims-slate pointer-events-none" size={18} />
+                </div>
+              </motion.div>
+            )}
 
             <div className="flex items-start gap-3 px-1 py-1">
               <input 

@@ -11,11 +11,13 @@ import LecturerAssignmentsPage from './pages/LecturerAssignmentsPage';
 import LecturerGradingPage from './pages/LecturerGradingPage';
 import StudentDashboard from './pages/StudentDashboard';
 import StudentGradesPage from './pages/StudentGradesPage';
+import StudentCoursesPage from './pages/StudentCoursesPage';
 import SubmitAssignmentPage from './pages/SubmitAssignmentPage';
 import UploadHistoryPage from './pages/UploadHistoryPage';
 import UserManagementPage from './pages/UserManagementPage';
-import StudentCoursesPage from './pages/StudentCoursesPage';
 import StudentProfilePage from './pages/StudentProfilePage';
+import LecturerGradingFeed from './pages/LecturerGradingFeed';
+import StudentAssignmentsPage from './pages/StudentAssignmentsPage';
 import DashboardLayout from './components/layout/DashboardLayout';
 
 function App() {
@@ -33,18 +35,20 @@ function App() {
         <Route path="/logs" element={<DashboardLayout><SystemLogsPage /></DashboardLayout>} />
         
         {/* Lecturer Routes */}
-        <Route path="/lecturer-dashboard" element={<LecturerDashboard />} />
-        <Route path="/lecturer-courses" element={<LecturerCoursesPage />} />
-        <Route path="/lecturer-assignments" element={<LecturerAssignmentsPage />} />
-        <Route path="/lecturer-grading/:submissionId" element={<LecturerGradingPage />} />
+        <Route path="/lecturer-dashboard" element={<DashboardLayout><LecturerDashboard /></DashboardLayout>} />
+        <Route path="/lecturer-courses" element={<DashboardLayout><LecturerCoursesPage /></DashboardLayout>} />
+        <Route path="/lecturer-assignments" element={<DashboardLayout><LecturerAssignmentsPage /></DashboardLayout>} />
+        <Route path="/lecturer-grading" element={<DashboardLayout title="Grading Feed" breadcrumb="Review all student submissions"><LecturerGradingFeed /></DashboardLayout>} />
+        <Route path="/lecturer-grading/:submissionId" element={<DashboardLayout title="Grading Detail"><LecturerGradingPage /></DashboardLayout>} />
         
         {/* Student Routes */}
-        <Route path="/student-dashboard" element={<StudentDashboard />} />
-        <Route path="/student-courses" element={<StudentCoursesPage />} />
-        <Route path="/student-profile" element={<StudentProfilePage />} />
-        <Route path="/assignments/:assignmentId" element={<SubmitAssignmentPage />} />
-        <Route path="/upload-history" element={<UploadHistoryPage />} />
-        <Route path="/student-grades" element={<StudentGradesPage />} />
+        <Route path="/student-dashboard" element={<DashboardLayout><StudentDashboard /></DashboardLayout>} />
+        <Route path="/student-courses" element={<DashboardLayout><StudentCoursesPage /></DashboardLayout>} />
+        <Route path="/student-assignments" element={<DashboardLayout title="My Assignments"><StudentAssignmentsPage /></DashboardLayout>} />
+        <Route path="/student-profile" element={<DashboardLayout><StudentProfilePage /></DashboardLayout>} />
+        <Route path="/assignments/:assignmentId" element={<DashboardLayout title="Submit Assignment"><SubmitAssignmentPage /></DashboardLayout>} />
+        <Route path="/upload-history" element={<DashboardLayout><UploadHistoryPage /></DashboardLayout>} />
+        <Route path="/student-grades" element={<DashboardLayout><StudentGradesPage /></DashboardLayout>} />
         
         {/* Default Redirects */}
         <Route path="/" element={<Navigate to="/login" replace />} />

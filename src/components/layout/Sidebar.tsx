@@ -1,14 +1,14 @@
 import React from 'react';
-import { 
-  LayoutDashboard, 
-  Users, 
-  BookOpen, 
-  FileText, 
-  Terminal, 
-  Database, 
-  Settings, 
-  LogOut, 
-  GraduationCap 
+import {
+  LayoutDashboard,
+  Users,
+  BookOpen,
+  FileText,
+  Terminal,
+  Database,
+  Settings,
+  LogOut,
+  GraduationCap
 } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 
@@ -44,19 +44,23 @@ const Sidebar: React.FC = () => {
                 : 'text-hims-slate hover:bg-slate-50 hover:text-hims-dark'}
             `}
           >
-            <span className={({ isActive }: any) => isActive ? 'text-hims-blue' : 'text-slate-400 group-hover:text-hims-dark'}>
-              {item.icon}
-            </span>
-            {item.label}
+            {({ isActive }) => (
+              <>
+                <span className={isActive ? 'text-hims-blue' : 'text-slate-400 group-hover:text-hims-dark'}>
+                  {item.icon}
+                </span>
+                {item.label}
+              </>
+            )}
           </NavLink>
         ))}
       </nav>
 
       <div className="p-4 mt-auto">
         <div className="bg-slate-50 rounded-2xl p-4 flex items-center gap-3 mb-4">
-          <img 
-            src="https://api.dicebear.com/7.x/avataaars/svg?seed=Caroline&backgroundColor=b6e3f4" 
-            alt="User" 
+          <img
+            src="https://api.dicebear.com/7.x/avataaars/svg?seed=Caroline&backgroundColor=b6e3f4"
+            alt="User"
             className="w-10 h-10 rounded-full border-2 border-white shadow-sm"
           />
           <div className="overflow-hidden">
@@ -64,7 +68,7 @@ const Sidebar: React.FC = () => {
             <p className="text-[11px] font-medium text-hims-slate uppercase tracking-wider">System Admin</p>
           </div>
         </div>
-        
+
         <button className="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-semibold text-hims-slate hover:bg-slate-50 hover:text-red-500 transition-all duration-200 border border-transparent hover:border-red-100">
           <LogOut size={20} />
           Logout

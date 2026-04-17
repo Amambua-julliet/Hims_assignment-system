@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Bell, 
   Clock, 
   Star, 
   FileText, 
@@ -17,10 +16,10 @@ import { auth, db } from '../lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import type { UserProfile } from '../services/userService';
 import { userService } from '../services/userService';
-import type { Assignment, Submission } from '../services/assignmentService';
+import type { Assignment } from '../services/assignmentService';
 import { assignmentService } from '../services/assignmentService';
 import type { Course } from '../services/courseService';
-import { courseService } from '../services/courseService';
+// courseService is imported but unused in this file, so we'll remove it.
 import { doc, getDoc } from 'firebase/firestore';
 import { uploadToCloudinary } from '../lib/cloudinary';
 
@@ -75,7 +74,7 @@ const SubmitAssignmentPage: React.FC = () => {
         setUploading(true);
         // Simplified progress emulation for UI feel
         const progressInterval = setInterval(() => {
-          setUploadProgress(prev => (prev < 90 ? prev + 10 : prev));
+          setUploadProgress((prev: number) => (prev < 90 ? prev + 10 : prev));
         }, 200);
 
         const res = await uploadToCloudinary(selectedFile);
@@ -112,37 +111,7 @@ const SubmitAssignmentPage: React.FC = () => {
     }
   };
   return (
-    <div className="min-h-screen bg-[#F8FAFC] font-outfit">
-      {/* Student Top Header */}
-      <header className="h-20 bg-white border-b border-slate-100 px-8 flex items-center justify-between sticky top-0 z-50">
-        <div className="flex items-center gap-8">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-hims-blue rounded-xl flex items-center justify-center text-white">
-              <Star size={24} />
-            </div>
-            <span className="text-xl font-extrabold text-[#0F172A] tracking-tight uppercase">ACADSUBMIT</span>
-          </div>
-          <nav className="hidden md:flex items-center gap-8">
-            <a href="#" className="text-sm font-bold text-hims-slate hover:text-hims-blue transition-colors">Dashboard</a>
-            <a href="#" className="text-sm font-bold text-hims-slate hover:text-hims-blue transition-colors">Courses</a>
-            <a href="#" className="text-sm font-bold text-hims-blue border-b-2 border-hims-blue py-7">Assignments</a>
-            <a href="#" className="text-sm font-bold text-hims-slate hover:text-hims-blue transition-colors">Grades</a>
-          </nav>
-        </div>
-        
-        <div className="flex items-center gap-4">
-          <button className="p-2.5 rounded-full hover:bg-slate-50 text-hims-slate relative">
-            <Bell size={20} />
-            <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-red-500 border-2 border-white rounded-full"></span>
-          </button>
-          <img 
-            src={`https://ui-avatars.com/api/?name=${userProfile?.name || 'User'}&background=0f172a&color=fff`}
-            alt="Student" 
-            className="w-10 h-10 rounded-full border-2 border-white shadow-sm ring-1 ring-slate-100"
-          />
-        </div>
-      </header>
-
+    <div className="space-y-8">
       {isLoading && (
         <div className="fixed inset-0 bg-white/60 backdrop-blur-md z-[100] flex flex-col items-center justify-center text-blue-600">
           <Loader2 className="animate-spin mb-4" size={56} />
@@ -150,41 +119,40 @@ const SubmitAssignmentPage: React.FC = () => {
         </div>
       )}
 
-      <main className="p-4 md:p-10 space-y-8">
-        {/* Breadcrumb & Title */}
-        <div className="space-y-2">
-          <div className="flex items-center gap-2 text-[11px] font-bold text-hims-slate uppercase tracking-wider">
-            <span>{course?.code || 'FETCHING'}</span>
-            <ChevronRight size={12} />
-            <span className="text-hims-blue">Assignments</span>
+      {/* Breadcrumb & Title */}
+      <div className="space-y-2">
+        <div className="flex items-center gap-2 text-[11px] font-bold text-hims-slate uppercase tracking-wider">
+          <span>{course?.code || 'FETCHING'}</span>
+          <ChevronRight size={12} />
+          <span className="text-hims-blue">Assignments</span>
+        </div>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl md:text-4xl font-extrabold text-[#0F172A] mb-2 tracking-tight">{assignment?.title || 'Loading Assignment...'}</h1>
+            <p className="text-hims-slate font-medium">{course?.name || 'HIMS Buea Academic Portal'}</p>
           </div>
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <h1 className="text-3xl md:text-4xl font-extrabold text-[#0F172A] mb-2 tracking-tight">{assignment?.title || 'Loading Assignment...'}</h1>
-              <p className="text-hims-slate font-medium">{course?.name || 'HIMS Buea Academic Portal'}</p>
-            </div>
-            <div className="flex gap-3">
-               <div className="bg-white px-5 py-3 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-3">
-                 <div className="w-10 h-10 bg-blue-50 text-hims-blue rounded-xl flex items-center justify-center">
-                   <Clock size={20} />
-                 </div>
-                 <div>
-                   <p className="text-[10px] font-bold text-hims-slate uppercase mb-0.5">Due Date</p>
-                   <p className="text-sm font-bold text-hims-dark">{assignment?.dueDate ? new Date(assignment.dueDate).toLocaleDateString() : '...'}</p>
-                 </div>
+          <div className="flex gap-3">
+             <div className="bg-white px-5 py-3 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-3">
+               <div className="w-10 h-10 bg-blue-50 text-hims-blue rounded-xl flex items-center justify-center">
+                 <Clock size={20} />
                </div>
-               <div className="bg-white px-5 py-3 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-3">
-                 <div className="w-10 h-10 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center">
-                   <Star size={20} />
-                 </div>
-                 <div>
-                   <p className="text-[10px] font-bold text-hims-slate uppercase mb-0.5">Points</p>
-                   <p className="text-sm font-bold text-hims-dark">{assignment?.points || 100} Max</p>
-                 </div>
+               <div>
+                 <p className="text-[10px] font-bold text-hims-slate uppercase mb-0.5">Due Date</p>
+                 <p className="text-sm font-bold text-hims-dark">{assignment?.dueDate ? new Date(assignment.dueDate).toLocaleDateString() : '...'}</p>
                </div>
-            </div>
+             </div>
+             <div className="bg-white px-5 py-3 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-3">
+               <div className="w-10 h-10 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center">
+                 <Star size={20} />
+               </div>
+               <div>
+                 <p className="text-[10px] font-bold text-hims-slate uppercase mb-0.5">Points</p>
+                 <p className="text-sm font-bold text-hims-dark">{assignment?.points || 100} Max</p>
+               </div>
+             </div>
           </div>
         </div>
+      </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           {/* Left: Instructions */}
@@ -194,40 +162,37 @@ const SubmitAssignmentPage: React.FC = () => {
                 <FileText size={24} />
                 <h3 className="text-lg font-bold text-hims-dark">Assignment Instructions</h3>
               </div>
-              <p className="text-sm text-hims-slate leading-relaxed font-medium">
-                Please read the following requirements carefully before submitting your final project.
-              </p>
-              
-              <ul className="space-y-4">
-                <li className="flex gap-3">
-                  <CheckCircle2 size={18} className="text-hims-blue shrink-0 mt-0.5" />
-                  <div>
-                    <h4 className="text-sm font-bold text-hims-dark">Allowed Formats:</h4>
-                    <p className="text-xs text-hims-slate mt-1">Submit your design as a PDF or ZIP file containing the SQL script and ER diagrams.</p>
+              <div className="text-sm text-hims-slate leading-relaxed font-medium whitespace-pre-wrap">
+                {assignment?.instructions || 'No specific instructions provided.'}
+              </div>
+
+              {assignment?.fileUrl && (
+                <div className="pt-6 border-t border-slate-50">
+                  <div className="flex items-center gap-3 text-emerald-600 mb-4">
+                    <CheckCircle2 size={24} />
+                    <h3 className="text-lg font-bold text-hims-dark">Reference Materials</h3>
                   </div>
-                </li>
-                <li className="flex gap-3">
-                  <CheckCircle2 size={18} className="text-hims-blue shrink-0 mt-0.5" />
-                  <div>
-                    <h4 className="text-sm font-bold text-hims-dark">Naming Convention:</h4>
-                    <div className="bg-slate-50 px-3 py-1.5 rounded-lg text-[10px] font-mono text-hims-slate mt-2 inline-block">
-                      StudentName_ProjectTitle.extension
+                  <a 
+                    href={assignment.fileUrl} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-4 p-4 bg-emerald-50 border border-emerald-100 rounded-2xl group hover:bg-emerald-100 transition-all"
+                  >
+                    <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-emerald-600 shadow-sm group-hover:scale-110 transition-transform">
+                      <FileText size={20} />
                     </div>
-                  </div>
-                </li>
-                <li className="flex gap-3">
-                  <CheckCircle2 size={18} className="text-hims-blue shrink-0 mt-0.5" />
-                  <div>
-                    <h4 className="text-sm font-bold text-hims-dark">File Size:</h4>
-                    <p className="text-xs text-hims-slate mt-1">Maximum allowed file size is 50MB.</p>
-                  </div>
-                </li>
-              </ul>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[13px] font-bold text-hims-dark truncate">Download Resources</p>
+                      <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest mt-0.5">Attached by Lecturer</p>
+                    </div>
+                  </a>
+                </div>
+              )}
 
               <div className="bg-blue-50/50 p-6 rounded-2xl border border-blue-100/50 space-y-3">
                 <h4 className="text-sm font-bold text-hims-blue">Need help?</h4>
                 <p className="text-xs text-hims-slate leading-relaxed font-medium">
-                  Contact your lab instructor if you have issues with the portal upload.
+                  Contact your lab instructor if you have issues with the portal upload or instructions.
                 </p>
               </div>
             </div>
@@ -332,16 +297,6 @@ const SubmitAssignmentPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Footer */}
-        <footer className="pt-12 pb-8 border-t border-slate-100 flex flex-col md:flex-row justify-between items-center gap-6">
-          <p className="text-xs font-bold text-hims-slate uppercase tracking-wider">© 2023 HIMS Buea - Academic Submission Portal (ACADSUBMIT). All rights reserved.</p>
-          <div className="flex items-center gap-8">
-             <a href="#" className="text-xs font-bold text-hims-slate hover:text-hims-blue uppercase tracking-wider transition-colors">Privacy Policy</a>
-             <a href="#" className="text-xs font-bold text-hims-slate hover:text-hims-blue uppercase tracking-wider transition-colors">Support Center</a>
-             <a href="#" className="text-xs font-bold text-hims-slate hover:text-hims-blue uppercase tracking-wider transition-colors">Terms of Service</a>
-          </div>
-        </footer>
-      </main>
     </div>
   );
 };

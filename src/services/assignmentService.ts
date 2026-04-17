@@ -5,12 +5,13 @@ import {
   getDoc, 
   setDoc, 
   updateDoc, 
-  deleteDoc, 
+  deleteDoc,
   query, 
-  where,
-  orderBy
+  where
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
+import { notificationService } from './notificationService';
+import { userService } from './userService';
 
 export interface Assignment {
   id: string;
@@ -48,6 +49,11 @@ export const assignmentService = {
   // --- Assignment Management (Lecturer) ---
 
   async createAssignment(assignment: Omit<Assignment, 'id' | 'createdAt'>): Promise<string> {
+    // Defensive Validation
+    if (!assignment.title || !assignment.courseId || !assignment.lecturerId) {
+      throw new Error('Missing required fields for assignment creation.');
+    }
+
     const docRef = doc(collection(db, ASSIGNMENTS_COLLECTION));
     const newAssignment: Assignment = {
       ...assignment,
@@ -55,17 +61,57 @@ export const assignmentService = {
       createdAt: new Date().toISOString()
     };
     await setDoc(docRef, newAssignment);
+
+    // Notify all students registered for this course
+    try {
+      const students = await userService.getStudentsByCourse(assignment.courseId);
+      const notificationPromises = students.map(student => 
+        notificationService.createNotification({
+          userId: student.id,
+          title: 'New Assignment Posted',
+          message: `A new assignment "${assignment.title}" has been posted.`,
+          type: 'ASSIGNMENT',
+          link: `/assignments/${docRef.id}`
+        })
+      );
+      await Promise.all(notificationPromises);
+    } catch (err) {
+      console.error('Error sending assignment notifications:', err);
+    }
+
     return docRef.id;
   },
 
   async getAssignmentsByCourse(courseId: string): Promise<Assignment[]> {
     const q = query(
       collection(db, ASSIGNMENTS_COLLECTION), 
-      where("courseId", "==", courseId),
-      orderBy("createdAt", "desc")
+      where("courseId", "==", courseId)
     );
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Assignment));
+    const assignments = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Assignment));
+    // Client-side sort to bypass missing index requirements
+    return assignments.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  },
+
+  async getAssignmentsByLecturer(lecturerId: string): Promise<Assignment[]> {
+    const q = query(
+      collection(db, ASSIGNMENTS_COLLECTION), 
+      where("lecturerId", "==", lecturerId)
+    );
+    const querySnapshot = await getDocs(q);
+    const assignments = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Assignment));
+    // Client-side sort to bypass missing index requirements
+    return assignments.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  },
+
+  async updateAssignment(id: string, updates: Partial<Assignment>): Promise<void> {
+    const docRef = doc(db, ASSIGNMENTS_COLLECTION, id);
+    await updateDoc(docRef, updates);
+  },
+
+  async deleteAssignment(id: string): Promise<void> {
+    const docRef = doc(db, ASSIGNMENTS_COLLECTION, id);
+    await deleteDoc(docRef);
   },
 
   // --- Submission Management (Lecturer / Student) ---
@@ -79,17 +125,35 @@ export const assignmentService = {
       submittedAt: new Date().toISOString()
     };
     await setDoc(docRef, newSubmission);
+
+    // Notify the lecturer
+    try {
+      const assignDoc = await getDoc(doc(db, ASSIGNMENTS_COLLECTION, submission.assignmentId));
+      if (assignDoc.exists()) {
+        const assignData = assignDoc.data();
+        await notificationService.createNotification({
+          userId: assignData.lecturerId,
+          title: 'New Submission Received',
+          message: `${submission.studentName} has submitted "${assignData.title}".`,
+          type: 'SUBMISSION',
+          link: `/lecturer-grading/${docRef.id}`
+        });
+      }
+    } catch (err) {
+      console.error('Error sending submission notification:', err);
+    }
+
     return docRef.id;
   },
 
   async getSubmissionsByStudent(studentId: string): Promise<Submission[]> {
     const q = query(
       collection(db, SUBMISSIONS_COLLECTION), 
-      where("studentId", "==", studentId),
-      orderBy("submittedAt", "desc")
+      where("studentId", "==", studentId)
     );
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Submission));
+    const submissions = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Submission));
+    return submissions.sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
   },
 
   async getSubmissionsByAssignment(assignmentId: string): Promise<Submission[]> {
@@ -106,11 +170,11 @@ export const assignmentService = {
     // Firestore "in" query limited to 10 items. Usually enough for courses in a semester.
     const q = query(
       collection(db, ASSIGNMENTS_COLLECTION), 
-      where("courseId", "in", courseIds),
-      orderBy("createdAt", "desc")
+      where("courseId", "in", courseIds)
     );
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Assignment));
+    const assignments = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Assignment));
+    return assignments.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   },
 
   async updateGrade(submissionId: string, grade: Submission['grade'], feedback?: string): Promise<void> {
@@ -120,6 +184,26 @@ export const assignmentService = {
       feedback,
       status: 'GRADED'
     });
+
+    // Notify the student
+    try {
+      const subDoc = await getDoc(docRef);
+      if (subDoc.exists()) {
+        const subData = subDoc.data();
+        const assignDoc = await getDoc(doc(db, ASSIGNMENTS_COLLECTION, subData.assignmentId));
+        const assignTitle = assignDoc.exists() ? assignDoc.data().title : 'your assignment';
+        
+        await notificationService.createNotification({
+          userId: subData.studentId,
+          title: 'Assignment Graded',
+          message: `Your submission for "${assignTitle}" has been graded.`,
+          type: 'GRADING',
+          link: '/student-grades'
+        });
+      }
+    } catch (err) {
+      console.error('Error sending grade notification:', err);
+    }
   },
 
   // Stream submissions for a specific lecturer's courses
