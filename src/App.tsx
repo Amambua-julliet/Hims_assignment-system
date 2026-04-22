@@ -5,6 +5,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import ManageCoursesPage from './pages/ManageCoursesPage';
 import DatabaseBackupPage from './pages/DatabaseBackupPage';
 import SystemLogsPage from './pages/SystemLogsPage';
+import ReportsPage from './pages/ReportsPage';
 import LecturerDashboard from './pages/LecturerDashboard';
 import LecturerCoursesPage from './pages/LecturerCoursesPage';
 import LecturerAssignmentsPage from './pages/LecturerAssignmentsPage';
@@ -29,6 +30,7 @@ function App() {
         
         {/* Admin Routes */}
         <Route path="/dashboard" element={<DashboardLayout><AdminDashboard /></DashboardLayout>} />
+        <Route path="/reports" element={<DashboardLayout title="Reports" breadcrumb="Report students or teachers"><ReportsPage /></DashboardLayout>} />
         <Route path="/users" element={<DashboardLayout><UserManagementPage /></DashboardLayout>} />
         <Route path="/courses" element={<DashboardLayout><ManageCoursesPage /></DashboardLayout>} />
         <Route path="/backup" element={<DashboardLayout><DatabaseBackupPage /></DashboardLayout>} />
